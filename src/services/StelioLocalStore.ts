@@ -51,7 +51,6 @@ export function setLocal(key: any, payload: any) {
 
 }
 export function ifExists(key: any) {
-    console.log(localStorage)
     if (!localStorage.getItem(key))
         return false;
     return true;

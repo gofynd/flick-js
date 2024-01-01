@@ -4,6 +4,7 @@ import { appendLocal, setLocal, ifExists, getLocal, removeFromStart, deleteSteli
 import { EventPayload } from './src/models/eventPayload'
 import { v4 as uuidv4 } from 'uuid';
 import { SteliosEvent } from "./src/models/steliosEvent";
+import { axiosCreate } from "./src/utility/AxiosUtility";
 
 
 export var axiosRequest: any = null;
@@ -12,13 +13,15 @@ export var client: any = null
 export var apiKey: any = null;
 export var stelioLocal: any = null
 export var batchExecutorID: any = null
+
 export async function identify(userID: string, traits: any) {
-    if (!userID)
-        userID = `anonymous_${uuidv4()}`;
-    if (!traits)
-        traits = {};
-    return setLocal('userIdentity', { userID: userID, traits: traits })
+    let userIdentity = getLocal('userIdentity')
+    userIdentity['userID'] = userID
+    userIdentity['traits'] = traits
+    setLocal('userIdentity', userIdentity)
+    sendEvent("identity", userIdentity)    
 }
+
 export async function reset() {
     if (batchExecutorID) {
         clearInterval(batchExecutorID);
@@ -28,24 +31,17 @@ export async function reset() {
     deleteSteliosLocal('apiKey');
     deleteSteliosLocal('stelioEvents')
 }
-export async function initialize(apiKey: any) {
-    initStorage();
-    return validateClient(apiKey)
-        .then(res => {
-            if (res.data.isTokenValid == "true") {
-                if (!ifExists('userIdentity'))
-                    setLocal('userIdentity', { userID: `anonymous_${uuidv4()}`, traits: {} })
-                setLocal('apiKey', apiKey);
-                if (!batchExecutorID)
-                    batchExecutorID = setInterval(sendBatch, 5000)
-            }
 
-        })
-        .catch(err => {
-            console.error('error is', err);
-            return err
-        })
+export async function initialize(endpoint: string, apiKey: any) {
+    initStorage()
+    axiosCreate(endpoint)
+    if (!ifExists('userIdentity'))
+        setLocal('userIdentity', { anonymousID: uuidv4() })
+    if (!batchExecutorID)
+        batchExecutorID = setInterval(sendBatch, 5000)
+
 }
+
 export async function validateClient(apiKey: any) {
     return {
         "data": {
@@ -54,9 +50,10 @@ export async function validateClient(apiKey: any) {
     }
     //return validate( apiKey)
 }
+
 export async function sendEvent(eventName: any, props: any) {
-    if (!ifExists('userIdentity') || !ifExists('apiKey')) {
-        throw new Error('Please initialiaze userIdentity or Apikey Sdk by calling initialize or identify method');
+    if (!ifExists('userIdentity')) {
+        throw new Error('Please initialiaze userIdentity Sdk by calling initialize or identify method');
     }
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
@@ -64,14 +61,16 @@ export async function sendEvent(eventName: any, props: any) {
     let payload: SteliosEvent = generateContext(eventName, props);
     payload.context.traits = getLocal('userIdentity').traits || {};
     payload.user_id = getLocal('userIdentity').userID || '';
+    payload.anonymous_id = getLocal('userIdentity').anonymousID
     if (!ifExists('stelioEvents')) {
         setLocal('stelioEvents', new Array(payload))
         return;
     }
     return appendLocal('stelioEvents', payload)
 }
+
 async function sendBatch() {
-    if (!ifExists('stelioEvents') || !ifExists('userIdentity') || !ifExists('apiKey') || getLocal('stelioEvents').length == 0)
+    if (!ifExists('stelioEvents') || !ifExists('userIdentity') || getLocal('stelioEvents').length == 0)
         return;
     let event: EventPayload = {
         batch: getLocal('stelioEvents'),

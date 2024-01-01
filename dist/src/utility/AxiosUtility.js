@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.baseURLs = exports.axiosCreate = void 0;
+exports.baseURLs = exports.axiosCreate = exports.axiosClient = void 0;
 var axios_1 = require("axios");
-// import createAuthRefreshInterceptor from 'axios-auth-refresh';
-var axiosCreate = function () {
+function axiosCreate(endpoint) {
     var instance = axios_1.default.create({
-        baseURL: exports.baseURLs.event_bus,
+        baseURL: endpoint,
         headers: {
             "Content-type": "application/json"
         },
@@ -54,8 +53,8 @@ var axiosCreate = function () {
     //     return Promise.reject(err);
     //   }
     // );
-    return instance;
-};
+    exports.axiosClient = instance;
+}
 exports.axiosCreate = axiosCreate;
 exports.baseURLs = {
     event_bus: "http://localhost:8099/v1.0/click-analytics",

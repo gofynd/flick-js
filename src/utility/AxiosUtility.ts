@@ -1,9 +1,9 @@
-import axios , { AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 // import createAuthRefreshInterceptor from 'axios-auth-refresh';
-export const axiosCreate = () => {
-
+export var axiosClient: AxiosInstance;
+export function axiosCreate(endpoint: string) {
   const instance = axios.create({
-    baseURL: baseURLs.event_bus,
+    baseURL: endpoint,
     headers: {
       "Content-type": "application/json"
     },
@@ -52,7 +52,7 @@ export const axiosCreate = () => {
   //     return Promise.reject(err);
   //   }
   // );
-  return instance
+  axiosClient = instance
 }
 
 export const baseURLs = {

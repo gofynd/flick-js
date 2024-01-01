@@ -2,14 +2,14 @@ import { post } from "../utility/AxiosRequests";
 import { v4 as uuidv4 } from 'uuid';
 import { UAParser } from 'ua-parser-js';
 
-   export function validate( apiKey:any) {
-        let res = post('verify_token', { access_token: apiKey },{"x-dp-access-token":apiKey})
-        return res;
-    }
-    export function generateContext(eventName:any, props:any) {
-        //var parser = new UAParser(navigator.userAgent);
-        let payload = {
-            context: {
+export function validate(apiKey: any) {
+    let res = post('verify_token', { access_token: apiKey }, { "x-dp-access-token": apiKey })
+    return res;
+}
+export function generateContext(eventName: any, props: any) {
+    //var parser = new UAParser(navigator.userAgent);
+    let payload = {
+        context: {
             //     traits: {},
             //     library: {
             //         name: "Stelio.js",
@@ -31,13 +31,14 @@ import { UAParser } from 'ua-parser-js';
             //     device: {
             //         isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
             //     }
-            },
-            event_id: uuidv4(),
-            event_name: eventName,
-            properties: props,
-            event_timestamp: new Date(),
-            user_id: ''
-        }
-        return payload;
-
+        },
+        event_id: uuidv4(),
+        event_name: eventName,
+        properties: props,
+        event_timestamp: new Date(),
+        user_id: '',
+        anonymous_id: ''
     }
+    return payload;
+
+}

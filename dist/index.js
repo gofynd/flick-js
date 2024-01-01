@@ -41,6 +41,7 @@ var SteliosClient_1 = require("./src/services/SteliosClient");
 var EventsProcessor_1 = require("./src/services/EventsProcessor");
 var StelioLocalStore_1 = require("./src/services/StelioLocalStore");
 var uuid_1 = require("uuid");
+var AxiosUtility_1 = require("./src/utility/AxiosUtility");
 exports.axiosRequest = null;
 exports.eventProcessor = null;
 exports.client = null;
@@ -49,12 +50,13 @@ exports.stelioLocal = null;
 exports.batchExecutorID = null;
 function identify(userID, traits) {
     return __awaiter(this, void 0, void 0, function () {
+        var userIdentity;
         return __generator(this, function (_a) {
-            if (!userID)
-                userID = "anonymous_".concat((0, uuid_1.v4)());
-            if (!traits)
-                traits = {};
-            return [2 /*return*/, (0, StelioLocalStore_1.setLocal)('userIdentity', { userID: userID, traits: traits })];
+            userIdentity = (0, StelioLocalStore_1.getLocal)('userIdentity');
+            userIdentity['userID'] = userID;
+            userIdentity['traits'] = traits;
+            (0, StelioLocalStore_1.setLocal)('userIdentity', userIdentity);
+            sendEvent("identity", userIdentity);
         });
     });
 }
@@ -74,24 +76,16 @@ function reset() {
     });
 }
 exports.reset = reset;
-function initialize(apiKey) {
+function initialize(endpoint, apiKey) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             (0, StelioLocalStore_1.initStorage)();
-            return [2 /*return*/, validateClient(apiKey)
-                    .then(function (res) {
-                    if (res.data.isTokenValid == "true") {
-                        if (!(0, StelioLocalStore_1.ifExists)('userIdentity'))
-                            (0, StelioLocalStore_1.setLocal)('userIdentity', { userID: "anonymous_".concat((0, uuid_1.v4)()), traits: {} });
-                        (0, StelioLocalStore_1.setLocal)('apiKey', apiKey);
-                        if (!exports.batchExecutorID)
-                            exports.batchExecutorID = setInterval(sendBatch, 5000);
-                    }
-                })
-                    .catch(function (err) {
-                    console.error('error is', err);
-                    return err;
-                })];
+            (0, AxiosUtility_1.axiosCreate)(endpoint);
+            if (!(0, StelioLocalStore_1.ifExists)('userIdentity'))
+                (0, StelioLocalStore_1.setLocal)('userIdentity', { anonymousID: (0, uuid_1.v4)() });
+            if (!exports.batchExecutorID)
+                exports.batchExecutorID = setInterval(sendBatch, 5000);
+            return [2 /*return*/];
         });
     });
 }
@@ -114,7 +108,7 @@ function sendEvent(eventName, props) {
     return __awaiter(this, void 0, void 0, function () {
         var payload;
         return __generator(this, function (_a) {
-            if (!(0, StelioLocalStore_1.ifExists)('userIdentity') || !(0, StelioLocalStore_1.ifExists)('apiKey')) {
+            if (!(0, StelioLocalStore_1.ifExists)('userIdentity')) {
                 throw new Error('Please initialiaze userIdentity or Apikey Sdk by calling initialize or identify method');
             }
             if (!eventName || !props) {
@@ -123,6 +117,7 @@ function sendEvent(eventName, props) {
             payload = (0, SteliosClient_1.generateContext)(eventName, props);
             payload.context.traits = (0, StelioLocalStore_1.getLocal)('userIdentity').traits || {};
             payload.user_id = (0, StelioLocalStore_1.getLocal)('userIdentity').userID || '';
+            payload.anonymous_id = (0, StelioLocalStore_1.getLocal)('userIdentity').anonymousID || '';
             if (!(0, StelioLocalStore_1.ifExists)('stelioEvents')) {
                 (0, StelioLocalStore_1.setLocal)('stelioEvents', new Array(payload));
                 return [2 /*return*/];
@@ -136,7 +131,7 @@ function sendBatch() {
     return __awaiter(this, void 0, void 0, function () {
         var event, size;
         return __generator(this, function (_a) {
-            if (!(0, StelioLocalStore_1.ifExists)('stelioEvents') || !(0, StelioLocalStore_1.ifExists)('userIdentity') || !(0, StelioLocalStore_1.ifExists)('apiKey') || (0, StelioLocalStore_1.getLocal)('stelioEvents').length == 0)
+            if (!(0, StelioLocalStore_1.ifExists)('stelioEvents') || !(0, StelioLocalStore_1.ifExists)('userIdentity') || (0, StelioLocalStore_1.getLocal)('stelioEvents').length == 0)
                 return [2 /*return*/];
             event = {
                 batch: (0, StelioLocalStore_1.getLocal)('stelioEvents'),

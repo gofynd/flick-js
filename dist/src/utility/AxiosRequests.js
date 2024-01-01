@@ -55,7 +55,7 @@ function post(url, request, header) {
         var headers;
         return __generator(this, function (_a) {
             headers = __assign({}, header);
-            return [2 /*return*/, (0, AxiosUtility_1.axiosCreate)().post(url, request, {
+            return [2 /*return*/, AxiosUtility_1.axiosClient.post(url, request, {
                     headers: headers
                 })];
         });

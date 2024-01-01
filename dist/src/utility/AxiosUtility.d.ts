@@ -1,4 +1,6 @@
-export declare const axiosCreate: () => import("axios").AxiosInstance;
+import { AxiosInstance } from "axios";
+export declare var axiosClient: AxiosInstance;
+export declare function axiosCreate(endpoint: string): void;
 export declare const baseURLs: {
     event_bus: string;
 };

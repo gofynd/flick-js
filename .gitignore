@@ -1,0 +1,19 @@
+/node_modules/*
+/dist/*
+/public/*
+/wpublic/*
+/website/*
+/src/auto_gen/*
+*.log
+
+/.nyc_output
+
+/src/coverage/
+/coverage
+/src/coverage
+/server/coverage
+src/documentation/*
+
+# ignore snapshots
+__snapshots__/
+

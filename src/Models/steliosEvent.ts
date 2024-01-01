@@ -5,4 +5,5 @@ export type SteliosEvent = {
     user_id: string,
     properties: any,
     event_timestamp: Date
+    anonymous_id: string
 };
