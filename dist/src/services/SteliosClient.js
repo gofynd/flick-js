@@ -38,7 +38,8 @@ function generateContext(eventName, props) {
         event_name: eventName,
         properties: props,
         event_timestamp: new Date(),
-        user_id: ''
+        user_id: '',
+        anonymous_id: ''
     };
     return payload;
 }

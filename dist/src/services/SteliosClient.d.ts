@@ -6,4 +6,5 @@ export declare function generateContext(eventName: any, props: any): {
     properties: any;
     event_timestamp: Date;
     user_id: string;
+    anonymous_id: string;
 };

@@ -57,6 +57,7 @@ function identify(userID, traits) {
             userIdentity['traits'] = traits;
             (0, StelioLocalStore_1.setLocal)('userIdentity', userIdentity);
             sendEvent("identity", userIdentity);
+            return [2 /*return*/];
         });
     });
 }
@@ -109,7 +110,7 @@ function sendEvent(eventName, props) {
         var payload;
         return __generator(this, function (_a) {
             if (!(0, StelioLocalStore_1.ifExists)('userIdentity')) {
-                throw new Error('Please initialiaze userIdentity or Apikey Sdk by calling initialize or identify method');
+                throw new Error('Please initialiaze userIdentity Sdk by calling initialize or identify method');
             }
             if (!eventName || !props) {
                 throw new Error('Please provide eventName and properties of the user');
@@ -117,7 +118,7 @@ function sendEvent(eventName, props) {
             payload = (0, SteliosClient_1.generateContext)(eventName, props);
             payload.context.traits = (0, StelioLocalStore_1.getLocal)('userIdentity').traits || {};
             payload.user_id = (0, StelioLocalStore_1.getLocal)('userIdentity').userID || '';
-            payload.anonymous_id = (0, StelioLocalStore_1.getLocal)('userIdentity').anonymousID || '';
+            payload.anonymous_id = (0, StelioLocalStore_1.getLocal)('userIdentity').anonymousID;
             if (!(0, StelioLocalStore_1.ifExists)('stelioEvents')) {
                 (0, StelioLocalStore_1.setLocal)('stelioEvents', new Array(payload));
                 return [2 /*return*/];
