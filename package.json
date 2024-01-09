@@ -4,6 +4,14 @@
   "description": "sdk for data pipeline",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc --build --force tsconfig.json",
     "test": "nyc --exclude ./src,./scratch,./node_modules,./spec,./config,./test,./index.js,./init.js,./newrelic.js,./shim.js --reporter=json-summary mocha test/**/*.js --reporter spec --timeout 10000 --exit",
