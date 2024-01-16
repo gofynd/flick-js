@@ -53,8 +53,10 @@ function identify(userID, traits) {
         var userIdentity;
         return __generator(this, function (_a) {
             userIdentity = (0, StelioLocalStore_1.getLocal)('userIdentity');
-            userIdentity['userID'] = userID;
-            userIdentity['traits'] = traits;
+            // Check if userIdentity does not exist or if userID has changed
+            if (!userIdentity || userIdentity.userID !== userID) {
+                (0, StelioLocalStore_1.setLocal)('userIdentity', { anonymousID: (0, uuid_1.v4)(), userID: userID, traits: traits });
+            }
             (0, StelioLocalStore_1.setLocal)('userIdentity', userIdentity);
             sendEvent("identity", userIdentity);
             return [2 /*return*/];
@@ -82,8 +84,6 @@ function initialize(endpoint, apiKey) {
         return __generator(this, function (_a) {
             (0, StelioLocalStore_1.initStorage)();
             (0, AxiosUtility_1.axiosCreate)(endpoint);
-            if (!(0, StelioLocalStore_1.ifExists)('userIdentity'))
-                (0, StelioLocalStore_1.setLocal)('userIdentity', { anonymousID: (0, uuid_1.v4)() });
             if (!exports.batchExecutorID)
                 exports.batchExecutorID = setInterval(sendBatch, 5000);
             return [2 /*return*/];
@@ -110,14 +110,14 @@ function sendEvent(eventName, props) {
         var payload;
         return __generator(this, function (_a) {
             if (!(0, StelioLocalStore_1.ifExists)('userIdentity')) {
-                throw new Error('Please initialiaze userIdentity Sdk by calling initialize or identify method');
+                (0, StelioLocalStore_1.setLocal)('userIdentity', { anonymousID: (0, uuid_1.v4)() });
             }
             if (!eventName || !props) {
                 throw new Error('Please provide eventName and properties of the user');
             }
             payload = (0, SteliosClient_1.generateContext)(eventName, props);
             payload.context.traits = (0, StelioLocalStore_1.getLocal)('userIdentity').traits || {};
-            payload.user_id = (0, StelioLocalStore_1.getLocal)('userIdentity').userID || '';
+            payload.user_id = (0, StelioLocalStore_1.getLocal)('userIdentity').userID || null;
             payload.anonymous_id = (0, StelioLocalStore_1.getLocal)('userIdentity').anonymousID;
             if (!(0, StelioLocalStore_1.ifExists)('stelioEvents')) {
                 (0, StelioLocalStore_1.setLocal)('stelioEvents', new Array(payload));
