@@ -15,11 +15,13 @@ export var stelioLocal: any = null
 export var batchExecutorID: any = null
 
 export async function identify(userID: string, traits: any) {
-    let userIdentity = getLocal('userIdentity')
-    userIdentity['userID'] = userID
-    userIdentity['traits'] = traits
+    const userIdentity = getLocal('userIdentity');
+    // Check if userIdentity does not exist or if userID has changed
+    if (!userIdentity || userIdentity.userID !== userID) {
+        setLocal('userIdentity', { anonymousID: uuidv4(), userID: userID, traits: traits });
+    }
     setLocal('userIdentity', userIdentity)
-    sendEvent("identity", userIdentity)    
+    sendEvent("identity", userIdentity)
 }
 
 export async function reset() {
@@ -35,11 +37,8 @@ export async function reset() {
 export async function initialize(endpoint: string, apiKey: any) {
     initStorage()
     axiosCreate(endpoint)
-    if (!ifExists('userIdentity'))
-        setLocal('userIdentity', { anonymousID: uuidv4() })
     if (!batchExecutorID)
         batchExecutorID = setInterval(sendBatch, 5000)
-
 }
 
 export async function validateClient(apiKey: any) {
@@ -53,14 +52,14 @@ export async function validateClient(apiKey: any) {
 
 export async function sendEvent(eventName: any, props: any) {
     if (!ifExists('userIdentity')) {
-        throw new Error('Please initialiaze userIdentity Sdk by calling initialize or identify method');
+        setLocal('userIdentity', { anonymousID: uuidv4() })
     }
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
     let payload: SteliosEvent = generateContext(eventName, props);
     payload.context.traits = getLocal('userIdentity').traits || {};
-    payload.user_id = getLocal('userIdentity').userID || '';
+    payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID
     if (!ifExists('stelioEvents')) {
         setLocal('stelioEvents', new Array(payload))
