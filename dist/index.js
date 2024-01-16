@@ -57,7 +57,6 @@ function identify(userID, traits) {
             if (!userIdentity || userIdentity.userID !== userID) {
                 (0, StelioLocalStore_1.setLocal)('userIdentity', { anonymousID: (0, uuid_1.v4)(), userID: userID, traits: traits });
             }
-            (0, StelioLocalStore_1.setLocal)('userIdentity', userIdentity);
             sendEvent("identity", userIdentity);
             return [2 /*return*/];
         });

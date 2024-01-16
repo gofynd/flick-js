@@ -20,7 +20,6 @@ export async function identify(userID: string, traits: any) {
     if (!userIdentity || userIdentity.userID !== userID) {
         setLocal('userIdentity', { anonymousID: uuidv4(), userID: userID, traits: traits });
     }
-    setLocal('userIdentity', userIdentity)
     sendEvent("identity", userIdentity)
 }
 
