@@ -72,7 +72,6 @@ function reset() {
             }
             (0, StelioLocalStore_1.deleteSteliosLocal)('userIdentity');
             (0, StelioLocalStore_1.deleteSteliosLocal)('apiKey');
-            (0, StelioLocalStore_1.deleteSteliosLocal)('stelioEvents');
             return [2 /*return*/];
         });
     });

@@ -30,7 +30,6 @@ export async function reset() {
     }
     deleteSteliosLocal('userIdentity');
     deleteSteliosLocal('apiKey');
-    deleteSteliosLocal('stelioEvents')
 }
 
 export async function initialize(endpoint: string, apiKey: any) {
