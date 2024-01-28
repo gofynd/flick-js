@@ -25,7 +25,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.axiosCreate = exports.axiosClient = void 0;
 var axios_1 = require("axios");
 var isAbsoluteURL_1 = require("axios/lib/helpers/isAbsoluteURL");
-var query_string_1 = require("query-string");
+var querystring = require("query-string");
 var sign = require("@gofynd/fp-signature").sign;
 function getTransformer(config) {
     var transformRequest = config.transformRequest;
@@ -52,12 +52,12 @@ function requestInterceptorFn() {
         var _a = new URL(url), host = _a.host, pathname = _a.pathname, search = _a.search;
         var data = config.data, headers = config.headers, method = config.method, params = config.params;
         //headers["x-fp-sdk-version"] = version;
-        var querySearchObj = query_string_1.default.parse(search);
+        var querySearchObj = querystring.parse(search);
         querySearchObj = __assign(__assign({}, querySearchObj), params);
         var queryParam = "";
         if (querySearchObj && Object.keys(querySearchObj).length) {
-            if (query_string_1.default.stringify(querySearchObj).trim() !== "") {
-                queryParam = "?".concat(query_string_1.default.stringify(querySearchObj));
+            if (querystring.stringify(querySearchObj).trim() !== "") {
+                queryParam = "?".concat(querystring.stringify(querySearchObj));
             }
         }
         var transformedData;

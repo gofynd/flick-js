@@ -1,8 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { isAbsoluteURL, combineURLs } from "axios/lib/helpers/isAbsoluteURL";
-import querystring from "query-string";
-const { sign } = require("@gofynd/fp-signature");
-// import createAuthRefreshInterceptor from 'axios-auth-refresh';
+const querystring = require("query-string");
+const { sign } = require("@gofynd/fp-signature")
 export var axiosClient: AxiosInstance;
 
 function getTransformer(config) {
@@ -70,8 +69,7 @@ function requestInterceptorFn() {
       body: transformedData,
       headers: headersToSign
     };
-    const signature = sign(signingOptions);
-
+    const signature = sign(signingOptions)
     config.headers["x-fp-date"] = signature["x-fp-date"];
     config.headers["x-fp-signature"] = signature["x-fp-signature"];
     // config.headers["fp-sdk-version"] = version;
