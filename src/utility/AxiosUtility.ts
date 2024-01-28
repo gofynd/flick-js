@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { isAbsoluteURL, combineURLs } from "axios/lib/helpers/isAbsoluteURL";
+import combineURLs from "axios/lib/helpers/combineURLs";
+import isAbsoluteURL from "axios/lib/helpers/isAbsoluteURL";
 const querystring = require("query-string");
 const { sign } = require("@gofynd/fp-signature")
 export var axiosClient: AxiosInstance;

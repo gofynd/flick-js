@@ -24,6 +24,7 @@ var __rest = (this && this.__rest) || function (s, e) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.axiosCreate = exports.axiosClient = void 0;
 var axios_1 = require("axios");
+var combineURLs_1 = require("axios/lib/helpers/combineURLs");
 var isAbsoluteURL_1 = require("axios/lib/helpers/isAbsoluteURL");
 var querystring = require("query-string");
 var sign = require("@gofynd/fp-signature").sign;
@@ -46,8 +47,8 @@ function requestInterceptorFn() {
             throw new Error("No URL present in request config, unable to sign request");
         }
         var url = config.url;
-        if (config.baseURL && !(0, isAbsoluteURL_1.isAbsoluteURL)(config.url)) {
-            url = (0, isAbsoluteURL_1.combineURLs)(config.baseURL, config.url);
+        if (config.baseURL && !(0, isAbsoluteURL_1.default)(config.url)) {
+            url = (0, combineURLs_1.default)(config.baseURL, config.url);
         }
         var _a = new URL(url), host = _a.host, pathname = _a.pathname, search = _a.search;
         var data = config.data, headers = config.headers, method = config.method, params = config.params;
