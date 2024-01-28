@@ -74,7 +74,7 @@ async function sendBatch() {
         sentAt: new Date().toDateString(),
     }
     let size = getLocal('stelioEvents').length || 0;
-    send(getLocal('apiKey'), event)
+    send(event, {})
         .then((res: any) => {
             removeFromStart(size, 'stelioEvents')
         })

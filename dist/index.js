@@ -137,7 +137,7 @@ function sendBatch() {
                 sentAt: new Date().toDateString(),
             };
             size = (0, StelioLocalStore_1.getLocal)('stelioEvents').length || 0;
-            (0, EventsProcessor_1.send)((0, StelioLocalStore_1.getLocal)('apiKey'), event)
+            (0, EventsProcessor_1.send)(event, {})
                 .then(function (res) {
                 (0, StelioLocalStore_1.removeFromStart)(size, 'stelioEvents');
             })
