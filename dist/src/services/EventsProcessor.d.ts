@@ -1,1 +1,1 @@
-export declare function send(apiKey: any, payload: any): Promise<import("axios").AxiosResponse<any, any>>;
+export declare function send(payload: any, headers: any): Promise<import("axios").AxiosResponse<any, any>>;

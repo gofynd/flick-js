@@ -34,7 +34,7 @@ export async function reset() {
 
 export async function initialize(endpoint: string, apiKey: any) {
     initStorage()
-    axiosCreate(endpoint)
+    axiosCreate(endpoint, apiKey)
     if (!batchExecutorID)
         batchExecutorID = setInterval(sendBatch, 5000)
 }

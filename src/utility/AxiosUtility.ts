@@ -78,11 +78,12 @@ function requestInterceptorFn() {
   };
 }
 
-export function axiosCreate(endpoint: string) {
+export function axiosCreate(endpoint: string, apiKey: string) {
   const instance = axios.create({
     baseURL: endpoint,
     headers: {
-      "Content-type": "application/json"
+      "Content-type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
     },
     withCredentials: true
   });

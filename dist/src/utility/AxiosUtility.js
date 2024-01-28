@@ -83,11 +83,12 @@ function requestInterceptorFn() {
         return config;
     };
 }
-function axiosCreate(endpoint) {
+function axiosCreate(endpoint, apiKey) {
     var instance = axios_1.default.create({
         baseURL: endpoint,
         headers: {
-            "Content-type": "application/json"
+            "Content-type": "application/json",
+            "Authorization": "Bearer ".concat(apiKey)
         },
         withCredentials: true
     });

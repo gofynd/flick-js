@@ -81,7 +81,7 @@ function initialize(endpoint, apiKey) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             (0, StelioLocalStore_1.initStorage)();
-            (0, AxiosUtility_1.axiosCreate)(endpoint);
+            (0, AxiosUtility_1.axiosCreate)(endpoint, apiKey);
             if (!exports.batchExecutorID)
                 exports.batchExecutorID = setInterval(sendBatch, 5000);
             return [2 /*return*/];
