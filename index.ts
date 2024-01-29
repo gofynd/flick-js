@@ -71,7 +71,7 @@ async function sendBatch() {
         return;
     let event: EventPayload = {
         batch: getLocal('stelioEvents'),
-        sentAt: new Date().toDateString(),
+        sentAt: new Date().toISOString(),
     }
     let size = getLocal('stelioEvents').length || 0;
     send(event, {})
