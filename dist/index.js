@@ -134,7 +134,7 @@ function sendBatch() {
                 return [2 /*return*/];
             event = {
                 batch: (0, StelioLocalStore_1.getLocal)('stelioEvents'),
-                sentAt: new Date().toDateString(),
+                sentAt: new Date().toISOString(),
             };
             size = (0, StelioLocalStore_1.getLocal)('stelioEvents').length || 0;
             (0, EventsProcessor_1.send)(event, {})
