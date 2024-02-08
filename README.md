@@ -1,4 +1,4 @@
-# flick-js
+# flick
 
 
 <!-- TABLE OF CONTENTS -->
@@ -23,7 +23,7 @@
 
 
 
-## About The flick-js
+## About The flick
 * Library can be used to capture and send click events in front-end js based applications. The library provides native support for click event tracking for Fynd Platform. Events emitted are sent to platform click data storage.
 
 ### Built With
@@ -50,7 +50,7 @@ To get a local copy up and running follow these simple example steps.
 
 <a name="developer-guide"> </a>
 ## Developers guide to send user event
-###### Code repo : [flick-js](https://github.com/gofynd/flick-js.git)
+###### Code repo : [flick](https://github.com/gofynd/flick-js.git)
    
 # initialize
     1.What is it 
