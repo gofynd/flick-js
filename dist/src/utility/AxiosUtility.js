@@ -38,7 +38,6 @@ function isAbsoluteURL(url) {
     // A simple regex that checks for the start of a URL scheme (http, https, etc.)
     return /^https?:\/\/|^\/\//i.test(url);
 }
-console.log(isAbsoluteURL("http://api.fynd.com/ates"));
 function getTransformer(config) {
     var transformRequest = config.transformRequest;
     if (transformRequest) {
