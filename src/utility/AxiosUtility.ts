@@ -1,9 +1,19 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-const combineURLs = require("axios/lib/helpers/combineURLs");
-const isAbsoluteURL = require("axios/lib/helpers/isAbsoluteURL");
 const querystring = require("query-string");
 const { sign } = require("@gofynd/fp-signature")
 export var axiosClient: AxiosInstance;
+
+function combineURLs(baseURL, relativeURL) {
+  if (!baseURL) return relativeURL;
+  if (!relativeURL) return baseURL;
+  // Trim trailing slash from baseURL if present and leading slash from relativeURL if present
+  return `${baseURL.replace(/\/+$/, '')}/${relativeURL.replace(/^\/+/, '')}`;
+}
+
+function isAbsoluteURL(url) {
+  // A simple regex that checks for the start of a URL scheme (http, https, etc.)
+  return /^https?:\/\/|^\/\//i.test(url);
+}
 
 function getTransformer(config) {
   const { transformRequest } = config;

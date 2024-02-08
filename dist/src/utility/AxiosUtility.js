@@ -24,10 +24,21 @@ var __rest = (this && this.__rest) || function (s, e) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.axiosCreate = exports.axiosClient = void 0;
 var axios_1 = require("axios");
-var combineURLs = require("axios/lib/helpers/combineURLs");
-var isAbsoluteURL = require("axios/lib/helpers/isAbsoluteURL");
 var querystring = require("query-string");
 var sign = require("@gofynd/fp-signature").sign;
+function combineURLs(baseURL, relativeURL) {
+    if (!baseURL)
+        return relativeURL;
+    if (!relativeURL)
+        return baseURL;
+    // Trim trailing slash from baseURL if present and leading slash from relativeURL if present
+    return "".concat(baseURL.replace(/\/+$/, ''), "/").concat(relativeURL.replace(/^\/+/, ''));
+}
+function isAbsoluteURL(url) {
+    // A simple regex that checks for the start of a URL scheme (http, https, etc.)
+    return /^https?:\/\/|^\/\//i.test(url);
+}
+console.log(isAbsoluteURL("http://api.fynd.com/ates"));
 function getTransformer(config) {
     var transformRequest = config.transformRequest;
     if (transformRequest) {
