@@ -33,7 +33,7 @@ describe("user identity key in local storage", () => {
 
     })
     it("should check local key ", async () => {
-        await Stelios.initialize('HXmAQbzV2ehNlMsj+XBAAg==');
+        await Stelios.initialize('dummy');
         const result = await Stelios.identify('test', {});
         expect(result).to.equal('test')
     })
@@ -59,7 +59,7 @@ describe("testing initialize functionality", () => {
     it("should check for error when api key is not valid", async () => {
 
         try {
-            const result = await Stelios.initialize('abc')
+            const result = await Stelios.initialize('dummy')
         } catch (err) {
             expect(err).null
         }
