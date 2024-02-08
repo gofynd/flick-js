@@ -1,5 +1,5 @@
 {
-  "name": "flick",
+  "name": "@gofynd/flick",
   "version": "1.0.0",
   "description": "sdk for data pipeline",
   "main": "./dist/index.js",
