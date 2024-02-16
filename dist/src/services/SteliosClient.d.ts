@@ -1,4 +1,4 @@
-export declare function validate(apiKey: any): Promise<import("axios").AxiosResponse<any, any>>;
+export declare function validate(apiKey: any): Promise<any>;
 export declare function generateContext(eventName: any, props: any): {
     context: {};
     event_id: string;
