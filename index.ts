@@ -81,8 +81,8 @@ async function sendBatch() {
         .catch(err => {
             console.error('error while sending api request ', err)
             // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
-            if (size > 2) {
-                removeFromStart(size - 2, 'flickEvents')
+            if (size > 1000) {
+                removeFromStart(size - 1000, 'flickEvents')
             }
         })
 }
