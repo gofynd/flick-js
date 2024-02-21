@@ -117,11 +117,11 @@ function sendEvent(eventName, props) {
             payload.context.traits = (0, StelioLocalStore_1.getLocal)('userIdentity').traits || {};
             payload.user_id = (0, StelioLocalStore_1.getLocal)('userIdentity').userID || null;
             payload.anonymous_id = (0, StelioLocalStore_1.getLocal)('userIdentity').anonymousID;
-            if (!(0, StelioLocalStore_1.ifExists)('stelioEvents')) {
-                (0, StelioLocalStore_1.setLocal)('stelioEvents', new Array(payload));
+            if (!(0, StelioLocalStore_1.ifExists)('flickEvents')) {
+                (0, StelioLocalStore_1.setLocal)('flickEvents', new Array(payload));
                 return [2 /*return*/];
             }
-            return [2 /*return*/, (0, StelioLocalStore_1.appendLocal)('stelioEvents', payload)];
+            return [2 /*return*/, (0, StelioLocalStore_1.appendLocal)('flickEvents', payload)];
         });
     });
 }
@@ -130,16 +130,16 @@ function sendBatch() {
     return __awaiter(this, void 0, void 0, function () {
         var event, size;
         return __generator(this, function (_a) {
-            if (!(0, StelioLocalStore_1.ifExists)('stelioEvents') || !(0, StelioLocalStore_1.ifExists)('userIdentity') || (0, StelioLocalStore_1.getLocal)('stelioEvents').length == 0)
+            if (!(0, StelioLocalStore_1.ifExists)('flickEvents') || !(0, StelioLocalStore_1.ifExists)('userIdentity') || (0, StelioLocalStore_1.getLocal)('flickEvents').length == 0)
                 return [2 /*return*/];
             event = {
-                batch: (0, StelioLocalStore_1.getLocal)('stelioEvents'),
+                batch: (0, StelioLocalStore_1.getLocal)('flickEvents'),
                 sentAt: new Date().toISOString(),
             };
-            size = (0, StelioLocalStore_1.getLocal)('stelioEvents').length || 0;
+            size = (0, StelioLocalStore_1.getLocal)('flickEvents').length || 0;
             (0, EventsProcessor_1.send)(event, {})
                 .then(function (res) {
-                (0, StelioLocalStore_1.removeFromStart)(size, 'stelioEvents');
+                (0, StelioLocalStore_1.removeFromStart)(size, 'flickEvents');
             })
                 .catch(function (err) { return console.error('error while sending api request ', err); });
             return [2 /*return*/];

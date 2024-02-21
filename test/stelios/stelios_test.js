@@ -75,7 +75,7 @@ describe("testing send event functionality", () => {
         event_timestamp: 'test'
     }
 
-    it("should check for send event functionality when stelioevents key is not present in local", async () => {
+    it("should check for send event functionality when flickEvents key is not present in local", async () => {
 
         var stub2 = sinon.stub(Stelios, "axiosRequest").returns(false)
         var stub3 = sinon.stub(Stelios, "eventProcessor").returns()
@@ -108,7 +108,7 @@ describe("testing send event functionality", () => {
 
     })
 
-    it("should check for send event functinoality when stelioevents key is  present in local", async () => {
+    it("should check for send event functinoality when flickEvents key is  present in local", async () => {
 
         var stub2 = sinon.stub(Stelios, "axiosRequest").returns(false)
         var stub3 = sinon.stub(Stelios, "eventProcessor").returns()
