@@ -59,25 +59,31 @@ export async function sendEvent(eventName: any, props: any) {
     payload.context.traits = getLocal('userIdentity').traits || {};
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID
-    if (!ifExists('stelioEvents')) {
-        setLocal('stelioEvents', new Array(payload))
+    if (!ifExists('flickEvents')) {
+        setLocal('flickEvents', new Array(payload))
         return;
     }
-    return appendLocal('stelioEvents', payload)
+    return appendLocal('flickEvents', payload)
 }
 
 async function sendBatch() {
-    if (!ifExists('stelioEvents') || !ifExists('userIdentity') || getLocal('stelioEvents').length == 0)
+    if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0)
         return;
     let event: EventPayload = {
-        batch: getLocal('stelioEvents'),
+        batch: getLocal('flickEvents'),
         sentAt: new Date().toISOString(),
     }
-    let size = getLocal('stelioEvents').length || 0;
+    let size = getLocal('flickEvents').length || 0;
     send(event, {})
         .then((res: any) => {
-            removeFromStart(size, 'stelioEvents')
+            removeFromStart(size, 'flickEvents')
         })
-        .catch(err => console.error('error while sending api request ', err))
+        .catch(err => {
+            console.error('error while sending api request ', err)
+            // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
+            if (size > 1000) {
+                removeFromStart(size - 1000, 'flickEvents')
+            }
+        })
 }
 

@@ -1,7 +1,7 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import axios from "axios"
 const querystring = require("query-string");
 const { sign } = require("@gofynd/fp-signature")
-export var axiosClient: AxiosInstance;
+export var axiosClient: any;
 
 function combineURLs(baseURL, relativeURL) {
   if (!baseURL) return relativeURL;
