@@ -23,7 +23,7 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.axiosCreate = exports.axiosClient = void 0;
-var axios = require("axios");
+var axios_1 = require("axios");
 var querystring = require("query-string");
 var sign = require("@gofynd/fp-signature").sign;
 function combineURLs(baseURL, relativeURL) {
@@ -94,7 +94,7 @@ function requestInterceptorFn() {
     };
 }
 function axiosCreate(endpoint, apiKey) {
-    var instance = axios.create({
+    var instance = axios_1.default.create({
         baseURL: endpoint,
         headers: {
             "Content-type": "application/json",

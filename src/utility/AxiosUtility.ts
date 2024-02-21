@@ -1,4 +1,4 @@
-const axios = require("axios")
+import axios from "axios"
 const querystring = require("query-string");
 const { sign } = require("@gofynd/fp-signature")
 export var axiosClient: any;
