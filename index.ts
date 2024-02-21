@@ -78,6 +78,12 @@ async function sendBatch() {
         .then((res: any) => {
             removeFromStart(size, 'flickEvents')
         })
-        .catch(err => console.error('error while sending api request ', err))
+        .catch(err => {
+            console.error('error while sending api request ', err)
+            // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
+            if (size > 2) {
+                removeFromStart(size - 2, 'flickEvents')
+            }
+        })
 }
 

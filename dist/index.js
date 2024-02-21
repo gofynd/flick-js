@@ -141,7 +141,13 @@ function sendBatch() {
                 .then(function (res) {
                 (0, StelioLocalStore_1.removeFromStart)(size, 'flickEvents');
             })
-                .catch(function (err) { return console.error('error while sending api request ', err); });
+                .catch(function (err) {
+                console.error('error while sending api request ', err);
+                // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
+                if (size > 2) {
+                    (0, StelioLocalStore_1.removeFromStart)(size - 2, 'flickEvents');
+                }
+            });
             return [2 /*return*/];
         });
     });
