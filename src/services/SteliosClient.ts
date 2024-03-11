@@ -10,10 +10,9 @@ export function generateContext(eventName: any, props: any) {
     //var parser = new UAParser(navigator.userAgent);
     let payload = {
         context: {
-            traits: {},
             library: {
                 name: "flick",
-                version: "1.0.3"
+                version: "1.0.4"
             },
             os: {
                 name: UAParser.OS.NAME,

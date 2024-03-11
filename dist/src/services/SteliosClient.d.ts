@@ -1,7 +1,6 @@
 export declare function validate(apiKey: any): Promise<any>;
 export declare function generateContext(eventName: any, props: any): {
     context: {
-        traits: {};
         library: {
             name: string;
             version: string;

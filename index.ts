@@ -15,12 +15,32 @@ export var stelioLocal: any = null
 export var batchExecutorID: any = null
 
 export async function identify(userID: string, traits: any) {
-    const userIdentity = getLocal('userIdentity');
-    // Check if userIdentity does not exist or if userID has changed
-    if (!userIdentity || userIdentity.userID !== userID) {
-        setLocal('userIdentity', { anonymousID: uuidv4(), userID: userID, traits: traits });
+    const existingIdentity = getLocal('userIdentity');
+    let newIdentity = {}
+    if (existingIdentity) {
+        // userIdentity exists
+        if (existingIdentity.userID && existingIdentity.userID !== userID) {
+            // userIdentity exists with a different userID, generate new anonymousID and userID
+            newIdentity = {
+                anonymousID: uuidv4(),
+                userID: userID
+            };
+        } else {
+            // userIdentity exists with the same userID, only add userID to existing anonymousID
+            newIdentity = {
+                ...existingIdentity,
+                userID: userID // Ensure userID is updated or added without changing anonymousID
+            };
+        }
+    } else {
+        // userIdentity doesn't exist, create a new one with new anonymousID
+        newIdentity = {
+            anonymousID: uuidv4(),
+            userID: userID
+        };
     }
-    sendEvent("identity", userIdentity)
+    setLocal("userIdentity", newIdentity)
+    sendEvent("identity", { "event_type": "identity", ...newIdentity, traits: traits })
 }
 
 export async function reset() {
@@ -56,7 +76,6 @@ export async function sendEvent(eventName: any, props: any) {
         throw new Error('Please provide eventName and properties of the user');
     }
     let payload: SteliosEvent = generateContext(eventName, props);
-    payload.context.traits = getLocal('userIdentity').traits || {};
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID
     if (!ifExists('flickEvents')) {

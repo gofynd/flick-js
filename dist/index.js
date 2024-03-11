@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,14 +61,34 @@ exports.stelioLocal = null;
 exports.batchExecutorID = null;
 function identify(userID, traits) {
     return __awaiter(this, void 0, void 0, function () {
-        var userIdentity;
+        var existingIdentity, newIdentity;
         return __generator(this, function (_a) {
-            userIdentity = (0, StelioLocalStore_1.getLocal)('userIdentity');
-            // Check if userIdentity does not exist or if userID has changed
-            if (!userIdentity || userIdentity.userID !== userID) {
-                (0, StelioLocalStore_1.setLocal)('userIdentity', { anonymousID: (0, uuid_1.v4)(), userID: userID, traits: traits });
+            existingIdentity = (0, StelioLocalStore_1.getLocal)('userIdentity');
+            newIdentity = {};
+            if (existingIdentity) {
+                // userIdentity exists
+                if (existingIdentity.userID && existingIdentity.userID !== userID) {
+                    // userIdentity exists with a different userID, generate new anonymousID and userID
+                    newIdentity = {
+                        anonymousID: (0, uuid_1.v4)(),
+                        userID: userID
+                    };
+                }
+                else {
+                    // userIdentity exists with the same userID, only add userID to existing anonymousID
+                    newIdentity = __assign(__assign({}, existingIdentity), { userID: userID // Ensure userID is updated or added without changing anonymousID
+                     });
+                }
             }
-            sendEvent("identity", userIdentity);
+            else {
+                // userIdentity doesn't exist, create a new one with new anonymousID
+                newIdentity = {
+                    anonymousID: (0, uuid_1.v4)(),
+                    userID: userID
+                };
+            }
+            (0, StelioLocalStore_1.setLocal)("userIdentity", newIdentity);
+            sendEvent("identity", __assign(__assign({ "event_type": "identity" }, newIdentity), { traits: traits }));
             return [2 /*return*/];
         });
     });
@@ -114,7 +145,6 @@ function sendEvent(eventName, props) {
                 throw new Error('Please provide eventName and properties of the user');
             }
             payload = (0, SteliosClient_1.generateContext)(eventName, props);
-            payload.context.traits = (0, StelioLocalStore_1.getLocal)('userIdentity').traits || {};
             payload.user_id = (0, StelioLocalStore_1.getLocal)('userIdentity').userID || null;
             payload.anonymous_id = (0, StelioLocalStore_1.getLocal)('userIdentity').anonymousID;
             if (!(0, StelioLocalStore_1.ifExists)('flickEvents')) {
@@ -144,8 +174,8 @@ function sendBatch() {
                 .catch(function (err) {
                 console.error('error while sending api request ', err);
                 // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
-                if (size > 2) {
-                    (0, StelioLocalStore_1.removeFromStart)(size - 2, 'flickEvents');
+                if (size > 1000) {
+                    (0, StelioLocalStore_1.removeFromStart)(size - 1000, 'flickEvents');
                 }
             });
             return [2 /*return*/];
