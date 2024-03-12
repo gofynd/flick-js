@@ -13,10 +13,9 @@ function generateContext(eventName, props) {
     //var parser = new UAParser(navigator.userAgent);
     var payload = {
         context: {
-            traits: {},
             library: {
                 name: "flick",
-                version: "1.0.3"
+                version: "1.0.4"
             },
             os: {
                 name: ua_parser_js_1.UAParser.OS.NAME,
