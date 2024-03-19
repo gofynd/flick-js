@@ -46,6 +46,10 @@ export async function identify(userID: string, traits: any) {
 export async function reset() {
     deleteSteliosLocal('userIdentity');
     deleteSteliosLocal('apiKey');
+    let newIdentity = {
+        anonymousID: uuidv4()
+    }
+    setLocal("userIdentity", newIdentity)
 }
 
 export async function initialize(endpoint: string, apiKey: any) {
