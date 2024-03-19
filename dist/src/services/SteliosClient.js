@@ -10,17 +10,14 @@ function validate(apiKey) {
 }
 exports.validate = validate;
 function generateContext(eventName, props) {
-    //var parser = new UAParser(navigator.userAgent);
+    var parser = new ua_parser_js_1.UAParser(navigator.userAgent);
     var payload = {
         context: {
             library: {
                 name: "flick",
                 version: "1.0.4"
             },
-            os: {
-                name: ua_parser_js_1.UAParser.OS.NAME,
-                version: ua_parser_js_1.UAParser.OS.VERSION
-            },
+            os: parser.getOS(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             screen: {
                 width: window.screen.availWidth,

@@ -1,3 +1,4 @@
+/// <reference types="ua-parser-js" />
 export declare function validate(apiKey: any): Promise<any>;
 export declare function generateContext(eventName: any, props: any): {
     context: {
@@ -5,10 +6,7 @@ export declare function generateContext(eventName: any, props: any): {
             name: string;
             version: string;
         };
-        os: {
-            name: "name";
-            version: "version";
-        };
+        os: import("ua-parser-js").IOS;
         timezone: string;
         screen: {
             width: number;

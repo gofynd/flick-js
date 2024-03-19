@@ -42,7 +42,7 @@ To get a local copy up and running follow these simple example steps.
 
 1. Include NPM packages in package.json
    ```sh
-   "@gofynd/flick": "1.0.4",
+   "@gofynd/flick": "1.0.5",
    ```
 
 

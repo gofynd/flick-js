@@ -40,14 +40,10 @@ export async function identify(userID: string, traits: any) {
         };
     }
     setLocal("userIdentity", newIdentity)
-    sendEvent("identity", { "event_type": "identity", ...newIdentity, traits: traits })
+    sendEvent("user_login", { "event_type": "identity", ...newIdentity, traits: traits })
 }
 
 export async function reset() {
-    if (batchExecutorID) {
-        clearInterval(batchExecutorID);
-        batchExecutorID = null
-    }
     deleteSteliosLocal('userIdentity');
     deleteSteliosLocal('apiKey');
 }
