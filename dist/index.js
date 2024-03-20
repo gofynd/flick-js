@@ -88,7 +88,7 @@ function identify(userID, traits) {
                 };
             }
             (0, StelioLocalStore_1.setLocal)("userIdentity", newIdentity);
-            sendEvent("identity", __assign(__assign({ "event_type": "identity" }, newIdentity), { traits: traits }));
+            sendEvent("user_login", __assign(__assign({ "event_type": "identity" }, newIdentity), { traits: traits }));
             return [2 /*return*/];
         });
     });
@@ -96,13 +96,14 @@ function identify(userID, traits) {
 exports.identify = identify;
 function reset() {
     return __awaiter(this, void 0, void 0, function () {
+        var newIdentity;
         return __generator(this, function (_a) {
-            if (exports.batchExecutorID) {
-                clearInterval(exports.batchExecutorID);
-                exports.batchExecutorID = null;
-            }
             (0, StelioLocalStore_1.deleteSteliosLocal)('userIdentity');
             (0, StelioLocalStore_1.deleteSteliosLocal)('apiKey');
+            newIdentity = {
+                anonymousID: (0, uuid_1.v4)()
+            };
+            (0, StelioLocalStore_1.setLocal)("userIdentity", newIdentity);
             return [2 /*return*/];
         });
     });
