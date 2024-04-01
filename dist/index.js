@@ -88,7 +88,7 @@ function identify(userID, traits) {
                 };
             }
             (0, StelioLocalStore_1.setLocal)("userIdentity", newIdentity);
-            sendEvent("user_login", __assign(__assign({ "event_type": "identity" }, newIdentity), { traits: traits }));
+            sendEvent("user_login", __assign({ "event_type": "identity" }, traits));
             return [2 /*return*/];
         });
     });

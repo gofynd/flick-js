@@ -40,7 +40,7 @@ export async function identify(userID: string, traits: any) {
         };
     }
     setLocal("userIdentity", newIdentity)
-    sendEvent("user_login", { "event_type": "identity", ...newIdentity, traits: traits })
+    sendEvent("user_login", { "event_type": "identity", ...traits })
 }
 
 export async function reset() {
