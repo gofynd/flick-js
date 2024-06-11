@@ -109,13 +109,14 @@ function reset() {
     });
 }
 exports.reset = reset;
-function initialize(endpoint, apiKey) {
+function initialize(endpoint, apiKey, flushInterval) {
+    if (flushInterval === void 0) { flushInterval = 15000; }
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             (0, StelioLocalStore_1.initStorage)();
             (0, AxiosUtility_1.axiosCreate)(endpoint, apiKey);
             if (!exports.batchExecutorID)
-                exports.batchExecutorID = setInterval(sendBatch, 5000);
+                exports.batchExecutorID = setInterval(sendBatch, flushInterval);
             return [2 /*return*/];
         });
     });

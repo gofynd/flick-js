@@ -52,11 +52,11 @@ export async function reset() {
     setLocal("userIdentity", newIdentity)
 }
 
-export async function initialize(endpoint: string, apiKey: any) {
+export async function initialize(endpoint: string, apiKey: any, flushInterval: number = 15000) {
     initStorage()
     axiosCreate(endpoint, apiKey)
     if (!batchExecutorID)
-        batchExecutorID = setInterval(sendBatch, 5000)
+        batchExecutorID = setInterval(sendBatch, flushInterval)
 }
 
 export async function validateClient(apiKey: any) {
