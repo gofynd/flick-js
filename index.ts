@@ -90,7 +90,7 @@ async function sendBatch() {
         return;
     let event: EventPayload = {
         batch: getLocal('flickEvents'),
-        sentAt: new Date().toISOString(),
+        sent_at: new Date().toISOString(),
     }
     let size = getLocal('flickEvents').length || 0;
     send(event, {})
