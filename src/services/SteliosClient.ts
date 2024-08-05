@@ -20,12 +20,12 @@ export function generateContext(eventName: any, props: any) {
                 width: window.screen.availWidth,
                 height: window.screen.availHeight
             },
-            userAgent: navigator.userAgent || '',
+            user_agent: navigator.userAgent || '',
             locale: navigator.languages && navigator.languages.length
                 ? navigator.languages[0]
                 : navigator.language,
             device: {
-                isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
             }
         },
         event_id: uuidv4(),

@@ -12,10 +12,10 @@ export declare function generateContext(eventName: any, props: any): {
             width: number;
             height: number;
         };
-        userAgent: string;
+        user_agent: string;
         locale: string;
         device: {
-            isMobile: boolean;
+            is_mobile: boolean;
         };
     };
     event_id: string;
