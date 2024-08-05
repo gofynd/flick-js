@@ -166,7 +166,7 @@ function sendBatch() {
                 return [2 /*return*/];
             event = {
                 batch: (0, StelioLocalStore_1.getLocal)('flickEvents'),
-                sentAt: new Date().toISOString(),
+                sent_at: new Date().toISOString(),
             };
             size = (0, StelioLocalStore_1.getLocal)('flickEvents').length || 0;
             (0, EventsProcessor_1.send)(event, {})
