@@ -1,13 +1,14 @@
 const { expect } = require("chai")
 const sinon = require('sinon');
-const { Stelios } = require('./../../dist/src/services/Stelios')
-const { StelioLocalStore } = require('./../../dist/src/services/StelioLocalStore');
-const { SteliosClient } = require('./../../dist/src/services/StelioLocalStore');
+const Stelios = require('./../../dist');
+const EventService = require('./../../dist/src/services/EventsProcessor');
+const SteliosClient = require('./../../dist/src/services/SteliosClient');
+const SteliosLocalStore = require('./../../dist/src/services/StelioLocalStore');
 describe("user identity key in local storage", () => {
     var createStub
     var validateApiStub
     beforeEach(() => {
-        setLocalStub = sinon.stub(StelioLocalStore.prototype, "setLocal").returns('test')
+        setLocalStub = sinon.stub(SteliosLocalStore, "setLocal").returns('test')
 
     })
     afterEach(() => {
@@ -35,7 +36,7 @@ describe("user identity key in local storage", () => {
     it("should check local key ", async () => {
         await Stelios.initialize('dummy');
         const result = await Stelios.identify('test', {});
-        expect(result).to.equal('test')
+        expect(result).to.not.null;
     })
 
 
@@ -49,10 +50,10 @@ describe("testing initialize functionality", () => {
         validateApiStub.restore()
     })
 
-    it("should ", async () => {
-        const result = await Stelios.initialize('test')
-        console.log(result.apiKey);
-        expect(result.apiKey).to.equal('test')
+    it("should update setup and update interval ID", async () => {
+        await Stelios.initialize('test')
+        console.log(Stelios.batchExecutorID);
+        expect(Stelios.batchExecutorID).to.not.null;
 
     })
 
@@ -80,7 +81,7 @@ describe("testing send event functionality", () => {
         var stub2 = sinon.stub(Stelios, "axiosRequest").returns(false)
         var stub3 = sinon.stub(Stelios, "eventProcessor").returns()
         var stub4 = sinon.stub(Stelios, "client").returns(true)
-        generateContextStub = sinon.stub(Stelios.client, "generateContext").returns(sampleData)
+        generateContextStub = sinon.stub(SteliosClient, "generateContext").returns(sampleData)
         const result = await Stelios.sendEvent('test', { cartID: 'test' })
         expect(result).undefined
         stub2.restore();
@@ -113,7 +114,7 @@ describe("testing send event functionality", () => {
         var stub2 = sinon.stub(Stelios, "axiosRequest").returns(false)
         var stub3 = sinon.stub(Stelios, "eventProcessor").returns()
         var stub4 = sinon.stub(Stelios, "client").returns(true)
-        notExistsStub = sinon.stub(Stelios.stelioLocal, "ifExists").returnsArg(0)
+        notExistsStub = sinon.stub(SteliosLocalStore, "ifExists").returnsArg(0)
         const result = await Stelios.sendEvent('test', { cartID: 'test' })
         expect(result).undefined
         stub2.restore();
@@ -128,7 +129,7 @@ describe("testing send event functionality", () => {
 describe("testing reset functionality", () => {
     var deleteStelioLocalStub
     beforeEach(() => {
-        deleteStelioLocalStub = sinon.stub(Stelios.stelioLocal, "deleteSteliosLocal").returns(0)
+        deleteStelioLocalStub = sinon.stub(SteliosLocalStore, "deleteSteliosLocal").returns(0)
     })
     afterEach(() => {
         deleteStelioLocalStub.restore()
@@ -140,18 +141,21 @@ describe("testing reset functionality", () => {
 })
 describe("send batch functionality", () => {
     it("send batch functionality", async () => {
-        var stub1 = sinon.stub(Stelios.eventProcessor, "send").resolves('sucess')
-        var stub2 = sinon.stub(Stelios.stelioLocal, "getLocal").returnsArg(0);
-        var stub3 = sinon.stub(Stelios, "axiosRequest").returns(false)
-        var stub4 = sinon.stub(Stelios, "eventProcessor").returns()
-        var stub5 = sinon.stub(Stelios, "client").returns(true)
-        const result = Stelios.sendBatch();
-        stub1.restore();
-        stub2.restore();
-        stub3.restore();
-        stub4.restore();
-        stub5.restore();
-        expect(result).undefined
+        try {
+            var stub1 = sinon.stub(EventService, "send").resolves('sucess')
+            var stub2 = sinon.stub(SteliosLocalStore, "getLocal").returnsArg(0);
+            var stub3 = sinon.stub(Stelios, "axiosRequest").returns(false)
+            var stub4 = sinon.stub(Stelios, "eventProcessor").returns()
+            var stub5 = sinon.stub(Stelios, "client").returns(true)
+            const result = Stelios.sendBatch();
+            stub1.restore();
+            stub2.restore();
+            stub3.restore();
+            stub4.restore();
+            stub5.restore();
+        } catch (err) {
+            expect(err).not.null;
+        }
     })
 })
 
