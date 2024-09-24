@@ -14,7 +14,7 @@ export var apiKey: any = null;
 export var stelioLocal: any = null
 export var batchExecutorID: any = null
 
-export async function identify(userID: string, traits: any, emitLogInEvent = true) {
+export async function identify(userID: string, traits: any, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
     let newIdentity = {}
     if (existingIdentity) {
@@ -40,7 +40,7 @@ export async function identify(userID: string, traits: any, emitLogInEvent = tru
         };
     }
     setLocal("userIdentity", newIdentity);
-    if(emitLogInEvent) {
+    if(emitLoginEvent) {
         sendEvent("user_login", { "event_type": "identity", ...traits });
     }
 }
