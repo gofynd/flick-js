@@ -4,7 +4,7 @@ export declare var client: any;
 export declare var apiKey: any;
 export declare var stelioLocal: any;
 export declare var batchExecutorID: any;
-export declare function identify(userID: string, traits: any): Promise<void>;
+export declare function identify(userID: string, traits: any, emitLoginEvent?: boolean): Promise<void>;
 export declare function reset(): Promise<void>;
 export declare function initialize(endpoint: string, apiKey: any, flushInterval?: number): Promise<void>;
 export declare function validateClient(apiKey: any): Promise<{
