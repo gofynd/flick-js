@@ -59,7 +59,8 @@ exports.client = null;
 exports.apiKey = null;
 exports.stelioLocal = null;
 exports.batchExecutorID = null;
-function identify(userID, traits) {
+function identify(userID, traits, emitLoginEvent) {
+    if (emitLoginEvent === void 0) { emitLoginEvent = true; }
     return __awaiter(this, void 0, void 0, function () {
         var existingIdentity, newIdentity;
         return __generator(this, function (_a) {
@@ -88,7 +89,9 @@ function identify(userID, traits) {
                 };
             }
             (0, StelioLocalStore_1.setLocal)("userIdentity", newIdentity);
-            sendEvent("user_login", __assign({ "event_type": "identity" }, traits));
+            if (emitLoginEvent) {
+                sendEvent("user_login", __assign({ "event_type": "identity" }, traits));
+            }
             return [2 /*return*/];
         });
     });
