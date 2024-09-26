@@ -1,45 +1,23 @@
-"use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.axiosCreate = exports.axiosClient = void 0;
-var axios_1 = require("axios");
-var querystring = require("query-string");
-var sign = require("@gofynd/fp-signature").sign;
+import axios from "axios";
+import * as querystring from 'query-string';
+// const querystring = require("query-string");
+//  const { sign } = require("@gofynd/fp-signature")
+import { sign } from "@gofynd/fp-signature";
+export var axiosClient;
 function combineURLs(baseURL, relativeURL) {
     if (!baseURL)
         return relativeURL;
     if (!relativeURL)
         return baseURL;
     // Trim trailing slash from baseURL if present and leading slash from relativeURL if present
-    return "".concat(baseURL.replace(/\/+$/, ''), "/").concat(relativeURL.replace(/^\/+/, ''));
+    return `${baseURL.replace(/\/+$/, '')}/${relativeURL.replace(/^\/+/, '')}`;
 }
 function isAbsoluteURL(url) {
     // A simple regex that checks for the start of a URL scheme (http, https, etc.)
     return /^https?:\/\/|^\/\//i.test(url);
 }
 function getTransformer(config) {
-    var transformRequest = config.transformRequest;
+    const { transformRequest } = config;
     if (transformRequest) {
         if (typeof transformRequest === "function") {
             return transformRequest;
@@ -52,53 +30,53 @@ function getTransformer(config) {
 }
 function requestInterceptorFn() {
     console.log("########### inside response interceptor #############");
-    return function (config) {
+    return (config) => {
         if (!config.url) {
             throw new Error("No URL present in request config, unable to sign request");
         }
-        var url = config.url;
+        let url = config.url;
         if (config.baseURL && !isAbsoluteURL(config.url)) {
             url = combineURLs(config.baseURL, config.url);
         }
-        var _a = new URL(url), host = _a.host, pathname = _a.pathname, search = _a.search;
-        var data = config.data, headers = config.headers, method = config.method, params = config.params;
+        const { host, pathname, search } = new URL(url);
+        const { data, headers, method, params } = config;
         //headers["x-fp-sdk-version"] = version;
-        var querySearchObj = querystring.parse(search);
-        querySearchObj = __assign(__assign({}, querySearchObj), params);
-        var queryParam = "";
+        let querySearchObj = querystring.parse(search);
+        querySearchObj = { ...querySearchObj, ...params };
+        let queryParam = "";
         if (querySearchObj && Object.keys(querySearchObj).length) {
             if (querystring.stringify(querySearchObj).trim() !== "") {
-                queryParam = "?".concat(querystring.stringify(querySearchObj));
+                queryParam = `?${querystring.stringify(querySearchObj)}`;
             }
         }
-        var transformedData;
+        let transformedData;
         if (method != "get") {
-            var transformRequest = getTransformer(config);
+            const transformRequest = getTransformer(config);
             transformedData = transformRequest(data, headers);
         }
         // Remove all the default Axios headers
-        var common = headers.common, _delete = headers.delete, // 'delete' is a reserved word
-        get = headers.get, head = headers.head, post = headers.post, put = headers.put, patch = headers.patch, headersToSign = __rest(headers, ["common", "delete", "get", "head", "post", "put", "patch"]);
-        var signingOptions = {
+        const { common, delete: _delete, // 'delete' is a reserved word
+        get, head, post, put, patch, ...headersToSign } = headers;
+        const signingOptions = {
             method: method && method.toUpperCase(),
             host: host,
             path: pathname + search + queryParam,
             body: transformedData,
             headers: headersToSign
         };
-        var signature = sign(signingOptions);
+        const signature = sign(signingOptions);
         config.headers["x-fp-date"] = signature["x-fp-date"];
         config.headers["x-fp-signature"] = signature["x-fp-signature"];
         // config.headers["fp-sdk-version"] = version;
         return config;
     };
 }
-function axiosCreate(endpoint, apiKey) {
-    var instance = axios_1.default.create({
+export function axiosCreate(endpoint, apiKey) {
+    const instance = axios.create({
         baseURL: endpoint,
         headers: {
             "Content-type": "application/json",
-            "Authorization": "Bearer ".concat(apiKey)
+            "Authorization": `Bearer ${apiKey}`
         },
         withCredentials: true
     });
@@ -146,7 +124,6 @@ function axiosCreate(endpoint, apiKey) {
     //     return Promise.reject(err);
     //   }
     // );
-    exports.axiosClient = instance;
+    axiosClient = instance;
 }
-exports.axiosCreate = axiosCreate;
 //# sourceMappingURL=AxiosUtility.js.map

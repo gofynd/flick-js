@@ -1,21 +1,18 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteSteliosLocal = exports.removeFromStart = exports.getLocal = exports.ifExists = exports.setLocal = exports.appendLocal = exports.initStorage = void 0;
 //var localStorage: any = window.localStorage
 var localStorage;
-var inMemStore = {};
-var customLocalStorage = {
-    getItem: function (key) {
+let inMemStore = {};
+const customLocalStorage = {
+    getItem: (key) => {
         return inMemStore[key];
     },
-    setItem: function (key, value) {
+    setItem: (key, value) => {
         inMemStore[key] = value;
     },
-    removeItem: function (key) {
+    removeItem: (key) => {
         delete inMemStore[key];
     },
 };
-function initStorage() {
+export function initStorage() {
     console.log("############ inside initStorage ##############");
     var isBrowser = typeof window !== 'undefined';
     if (isBrowser) {
@@ -25,8 +22,7 @@ function initStorage() {
         localStorage = customLocalStorage;
     }
 }
-exports.initStorage = initStorage;
-function appendLocal(key, payload) {
+export function appendLocal(key, payload) {
     try {
         if (key.length == 0 || !payload)
             return;
@@ -40,8 +36,7 @@ function appendLocal(key, payload) {
         return err;
     }
 }
-exports.appendLocal = appendLocal;
-function setLocal(key, payload) {
+export function setLocal(key, payload) {
     try {
         if (!key || key.length == 0 || !payload) {
             return;
@@ -52,31 +47,28 @@ function setLocal(key, payload) {
         return err;
     }
 }
-exports.setLocal = setLocal;
-function ifExists(key) {
+export function ifExists(key) {
     if (!localStorage.getItem(key))
         return false;
     return true;
 }
-exports.ifExists = ifExists;
-function getLocal(key) {
+export function getLocal(key) {
     try {
         if (!key || key.length == 0)
             return 'null';
         if (!localStorage.getItem(key))
             return {};
-        var result = JSON.parse(localStorage.getItem(key));
+        const result = JSON.parse(localStorage.getItem(key));
         return result;
     }
     catch (err) {
         return err;
     }
 }
-exports.getLocal = getLocal;
-function removeFromStart(size, key) {
+export function removeFromStart(size, key) {
     if (!key || key.length == 0 || !ifExists(key))
         return;
-    var result = JSON.parse(localStorage.getItem(key));
+    let result = JSON.parse(localStorage.getItem(key));
     size = size > result.length ? result.length : size;
     result.splice(0, size);
     if (result && result.length > 0) {
@@ -85,13 +77,11 @@ function removeFromStart(size, key) {
     }
     return deleteSteliosLocal(key);
 }
-exports.removeFromStart = removeFromStart;
-function deleteSteliosLocal(key) {
+export function deleteSteliosLocal(key) {
     if (!key || key.length == 0 || !ifExists(key))
         return;
-    var res = localStorage.removeItem(key);
-    console.info("key ".concat(key, " deleted from localStorage"));
+    const res = localStorage.removeItem(key);
+    console.info(`key ${key} deleted from localStorage`);
     return res;
 }
-exports.deleteSteliosLocal = deleteSteliosLocal;
 //# sourceMappingURL=StelioLocalStore.js.map
