@@ -1,6 +1,10 @@
 import axios from "axios"
-const querystring = require("query-string");
-const { sign } = require("@gofynd/fp-signature")
+import * as querystring from 'query-string';
+// const querystring = require("query-string");
+//  const { sign } = require("@gofynd/fp-signature")
+
+import { sign } from "@gofynd/fp-signature";
+
 export var axiosClient: any;
 
 function combineURLs(baseURL, relativeURL) {

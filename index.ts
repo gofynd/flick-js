@@ -17,7 +17,7 @@ export var batchExecutorID: any = null
 export async function identify(userID: string, traits: any, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
     let newIdentity = {}
-    if (existingIdentity) {
+    if (existingIdentity && Object.keys(existingIdentity).length > 0 ) {
         // userIdentity exists
         if (existingIdentity.userID && existingIdentity.userID !== userID) {
             // userIdentity exists with a different userID, generate new anonymousID and userID

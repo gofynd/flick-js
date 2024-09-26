@@ -1,17 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateContext = exports.validate = void 0;
-var AxiosRequests_1 = require("../utility/AxiosRequests");
-var uuid_1 = require("uuid");
-var ua_parser_js_1 = require("ua-parser-js");
-function validate(apiKey) {
-    var res = (0, AxiosRequests_1.post)('verify_token', { access_token: apiKey }, { "x-dp-access-token": apiKey });
+import { post } from "../utility/AxiosRequests";
+import { v4 as uuidv4 } from 'uuid';
+import { UAParser } from 'ua-parser-js';
+export function validate(apiKey) {
+    let res = post('verify_token', { access_token: apiKey }, { "x-dp-access-token": apiKey });
     return res;
 }
-exports.validate = validate;
-function generateContext(eventName, props) {
-    var parser = new ua_parser_js_1.UAParser(navigator.userAgent);
-    var payload = {
+export function generateContext(eventName, props) {
+    var parser = new UAParser(navigator.userAgent);
+    let payload = {
         context: {
             library: {
                 name: "flick",
@@ -31,7 +27,7 @@ function generateContext(eventName, props) {
                 is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
             }
         },
-        event_id: (0, uuid_1.v4)(),
+        event_id: uuidv4(),
         event_name: eventName,
         properties: props,
         event_timestamp: new Date(),
@@ -40,5 +36,4 @@ function generateContext(eventName, props) {
     };
     return payload;
 }
-exports.generateContext = generateContext;
 //# sourceMappingURL=SteliosClient.js.map
