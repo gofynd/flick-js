@@ -13,6 +13,8 @@ export var client: any = null
 export var apiKey: any = null;
 export var stelioLocal: any = null
 export var batchExecutorID: any = null
+var  apiDurationTimer: any = null; // Global variable to time difference between multiple API calls 
+                                    // to avoid sending same data from multiple tabs 
 
 export async function identify(userID: string, traits: any, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
@@ -54,7 +56,8 @@ export async function reset() {
     setLocal("userIdentity", newIdentity)
 }
 
-export async function initialize(endpoint: string, apiKey: any, flushInterval: number = 15000) {
+export async function initialize(endpoint: string, apiKey: any, flushInterval: number = 15000, apiDurationInterval: number = 5000) {
+    apiDurationTimer = apiDurationInterval;
     initStorage()
     axiosCreate(endpoint, apiKey)
     if (!batchExecutorID)
@@ -88,6 +91,19 @@ export async function sendEvent(eventName: any, props: any) {
 }
 
 async function sendBatch() {
+    // check if apiCallTimestamp is present in localStorage
+    // if not present, set it to current time epoch
+    if (!ifExists('apiCallTimestamp')) {
+        setLocal('apiCallTimestamp', new Date().getTime());
+    } else {
+        // if timestamp is present check if apiDurationTimer has elapsed since then, if yes reset it
+        if (new Date().getTime() - getLocal('apiCallTimestamp') > apiDurationTimer) {
+            setLocal('apiCallTimestamp', new Date().getTime());
+        } else {
+            // if apiDurationTimer has not elapsed, make no api call and return
+            return;
+        }
+    }
     if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0)
         return;
     let event: EventPayload = {
