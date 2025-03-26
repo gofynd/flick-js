@@ -13,13 +13,13 @@ export var client: any = null
 export var apiKey: any = null;
 export var stelioLocal: any = null
 export var batchExecutorID: any = null
-var  apiDurationTimer: any = null; // Global variable to time difference between multiple API calls 
-                                    // to avoid sending same data from multiple tabs 
+var apiDurationTimer: any = null; // Global variable to time difference between multiple API calls 
+// to avoid sending same data from multiple tabs 
 
 export async function identify(userID: string, traits: any, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
     let newIdentity = {}
-    if (existingIdentity && Object.keys(existingIdentity).length > 0 ) {
+    if (existingIdentity && Object.keys(existingIdentity).length > 0) {
         // userIdentity exists
         if (existingIdentity.userID && existingIdentity.userID !== userID) {
             // userIdentity exists with a different userID, generate new anonymousID and userID
@@ -42,7 +42,7 @@ export async function identify(userID: string, traits: any, emitLoginEvent = tru
         };
     }
     setLocal("userIdentity", newIdentity);
-    if(emitLoginEvent) {
+    if (emitLoginEvent) {
         sendEvent("user_login", { "event_type": "identity", ...traits });
     }
 }
@@ -83,6 +83,23 @@ export async function sendEvent(eventName: any, props: any) {
     let payload: SteliosEvent = generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID
+    if (!payload.user_id) {
+        if (props.cart_id) {
+            setLocal('clickChaining', { previous_cart_id: props.cart_id })
+            props.previous_cart_id = props.cart_id
+        }
+    } else {
+        if (!getLocal('clickChaining')) {
+            if (props.cart_id) {
+                setLocal('clickChaining', { previous_cart_id: props.cart_id })
+                props.previous_cart_id = props.cart_id
+            }
+        } else {
+            if (props.cart_id) {
+                props.previous_cart_id = getLocal('clickChaining')?.previous_cart_id
+            }
+        }
+    }
     if (!ifExists('flickEvents')) {
         setLocal('flickEvents', new Array(payload))
         return;
@@ -123,4 +140,3 @@ async function sendBatch() {
             }
         })
 }
-
