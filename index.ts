@@ -82,16 +82,23 @@ export async function sendEvent(eventName: any, props: any) {
     }
     let payload: SteliosEvent = generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
-    payload.anonymous_id = getLocal('userIdentity').anonymousID
+    payload.anonymous_id = getLocal('userIdentity').anonymousID;
+    console.log('INSIDE FLICk %o', payload);
     if (!payload.user_id) {
+        console.log('INSIDE FLICk USER ID NOT FOUND');
         if (props.cart_id) {
+            console.log('INSIDE FLICk CART ID FOUND');
             setLocal('clickChaining', { previous_cart_id: props.cart_id })
             props.previous_cart_id = props.cart_id
+            console.log('INSIDE FLICk CART ID SET %o', props);
         }
     } else {
+        console.log('INSIDE FLICk ELSE BLOK');
         if (!getLocal('clickChaining')) {
+            console.log('INSIDE FLICk ELSE BLOK NO chaining');
             if (props.cart_id) {
                 setLocal('clickChaining', { previous_cart_id: props.cart_id })
+                console.log('INSIDE FLICk ELSE BLOK NO chaining cart id set %o', props);
                 props.previous_cart_id = props.cart_id
             }
         } else {
