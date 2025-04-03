@@ -103,7 +103,9 @@ export async function sendEvent(eventName: any, props: any) {
             }
         } else {
             if (props.cart_id) {
-                props.previous_cart_id = getLocal('clickChaining')?.previous_cart_id
+                if(getLocal('clickChaining') && getLocal('clickChaining').previous_cart_id){
+                    props.previous_cart_id = getLocal('clickChaining').previous_cart_id;
+                }  
             }
         }
     }
