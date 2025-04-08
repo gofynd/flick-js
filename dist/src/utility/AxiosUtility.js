@@ -29,7 +29,6 @@ function getTransformer(config) {
     throw new Error("Could not get default transformRequest function from Axios defaults");
 }
 function requestInterceptorFn() {
-    console.log("########### inside response interceptor #############");
     return (config) => {
         if (!config.url) {
             throw new Error("No URL present in request config, unable to sign request");

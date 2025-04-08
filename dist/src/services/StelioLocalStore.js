@@ -13,7 +13,6 @@ const customLocalStorage = {
     },
 };
 export function initStorage() {
-    console.log("############ inside initStorage ##############");
     var isBrowser = typeof window !== 'undefined';
     if (isBrowser) {
         localStorage = window.localStorage;
