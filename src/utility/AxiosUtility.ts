@@ -36,7 +36,6 @@ function getTransformer(config) {
 }
 
 function requestInterceptorFn() {
-  console.log("########### inside response interceptor #############")
   return (config) => {
     if (!config.url) {
       throw new Error(
