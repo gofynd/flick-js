@@ -74,6 +74,13 @@ export async function validateClient(apiKey: any) {
 }
 
 export async function sendEvent(eventName: any, props: any) {
+    let referer = null
+    if (!ifExists('referer')) {
+        referer = document.referrer
+        setLocal('referer', referer);
+    } else {
+        referer = getLocal('referer');
+    }
     if (!ifExists('userIdentity')) {
         setLocal('userIdentity', { anonymousID: uuidv4() })
     }
