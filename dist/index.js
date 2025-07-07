@@ -67,7 +67,7 @@ export async function validateClient(apiKey) {
     //return validate( apiKey)
 }
 export async function sendEvent(eventName, props) {
-    let referer = null;
+    let referer = '';
     if (!ifExists('referer')) {
         referer = document.referrer;
         setLocal('referer', referer);
@@ -104,6 +104,9 @@ export async function sendEvent(eventName, props) {
                 }
             }
         }
+    }
+    if (!props.utm_source || props.utm_source == '') {
+        props.utm_source = referer;
     }
     if (!ifExists('flickEvents')) {
         setLocal('flickEvents', new Array(payload));
