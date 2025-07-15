@@ -49,10 +49,6 @@ export function getLocation() {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
                     const accuracy = position.coords.accuracy;
-
-                    console.log("Latitude:", lat);
-                    console.log("Longitude:", lon);
-                    console.log("Accuracy (in meters):", accuracy);
                     resolve({ lat, long: lon, accuracy })
                 },
                 (error) => {
