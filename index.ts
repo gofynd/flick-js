@@ -87,7 +87,7 @@ export async function sendEvent(eventName: any, props: any) {
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
-    let payload: SteliosEvent = generateContext(eventName, props);
+    let payload: SteliosEvent = await generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID;
     if (!payload.user_id) {
