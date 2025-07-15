@@ -8,6 +8,7 @@ export declare function generateContext(eventName: any, props: any): {
         };
         os: import("ua-parser-js").IOS;
         timezone: string;
+        location: Promise<unknown>;
         screen: {
             width: number;
             height: number;
@@ -15,6 +16,9 @@ export declare function generateContext(eventName: any, props: any): {
         user_agent: string;
         locale: string;
         device: {
+            model: string;
+            type: string;
+            vendor: string;
             is_mobile: boolean;
         };
     };
@@ -25,3 +29,4 @@ export declare function generateContext(eventName: any, props: any): {
     user_id: string;
     anonymous_id: string;
 };
+export declare function getLocation(): Promise<unknown>;
