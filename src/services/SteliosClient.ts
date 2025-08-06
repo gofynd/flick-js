@@ -6,7 +6,7 @@ export function validate(apiKey: any) {
     let res = post('verify_token', { access_token: apiKey }, { "x-dp-access-token": apiKey })
     return res;
 }
-export async function generateContext(eventName: any, props: any) {
+export async function generateContext(eventName: any,version: string, props: any) {
     var parser = new UAParser(navigator.userAgent);
     let payload = {
         context: {
@@ -31,6 +31,7 @@ export async function generateContext(eventName: any, props: any) {
             }
         },
         event_id: uuidv4(),
+        version: version,
         event_name: eventName,
         properties: props,
         event_timestamp: new Date(),

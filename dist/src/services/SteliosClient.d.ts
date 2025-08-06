@@ -1,6 +1,6 @@
 /// <reference types="ua-parser-js" />
 export declare function validate(apiKey: any): Promise<any>;
-export declare function generateContext(eventName: any, props: any): Promise<{
+export declare function generateContext(eventName: any, version: string, props: any): Promise<{
     context: {
         library: {
             name: string;
@@ -23,6 +23,7 @@ export declare function generateContext(eventName: any, props: any): Promise<{
         };
     };
     event_id: string;
+    version: string;
     event_name: any;
     properties: any;
     event_timestamp: Date;

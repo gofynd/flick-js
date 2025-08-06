@@ -11,7 +11,7 @@ export var stelioLocal = null;
 export var batchExecutorID = null;
 var apiDurationTimer = null; // Global variable to time difference between multiple API calls 
 // to avoid sending same data from multiple tabs 
-export async function identify(userID, traits, emitLoginEvent = true) {
+export async function identify(userID, version, traits, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
     let newIdentity = {};
     if (existingIdentity && Object.keys(existingIdentity).length > 0) {
@@ -40,7 +40,7 @@ export async function identify(userID, traits, emitLoginEvent = true) {
     }
     setLocal("userIdentity", newIdentity);
     if (emitLoginEvent) {
-        sendEvent("user_login", { "event_type": "identity", ...traits });
+        sendEvent("user_login", version, { "event_type": "identity", ...traits });
     }
 }
 export async function reset() {
@@ -66,7 +66,7 @@ export async function validateClient(apiKey) {
     };
     //return validate( apiKey)
 }
-export async function sendEvent(eventName, props) {
+export async function sendEvent(eventName, version, props) {
     let referer = '';
     if (!ifExists('referer')) {
         referer = document.referrer;
@@ -81,7 +81,7 @@ export async function sendEvent(eventName, props) {
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
-    let payload = await generateContext(eventName, props);
+    let payload = await generateContext(eventName, version, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID;
     if (!payload.user_id) {
