@@ -16,7 +16,7 @@ export var batchExecutorID: any = null
 var apiDurationTimer: any = null; // Global variable to time difference between multiple API calls 
 // to avoid sending same data from multiple tabs 
 
-export async function identify(userID: string, version: string, traits: any, emitLoginEvent = true) {
+export async function identify(userID: string, traits: any, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
     let newIdentity = {}
     if (existingIdentity && Object.keys(existingIdentity).length > 0) {
@@ -43,7 +43,7 @@ export async function identify(userID: string, version: string, traits: any, emi
     }
     setLocal("userIdentity", newIdentity);
     if (emitLoginEvent) {
-        sendEvent("user_login", version, { "event_type": "identity", ...traits });
+        sendEvent("user_login", { "event_type": "identity", ...traits });
     }
 }
 
@@ -73,7 +73,7 @@ export async function validateClient(apiKey: any) {
     //return validate( apiKey)
 }
 
-export async function sendEvent(eventName: any, version :string, props: any) {
+export async function sendEvent(eventName: any, props: any) {
     let referer = ''
     if (!ifExists('referer')) {
         referer = document.referrer
@@ -87,9 +87,11 @@ export async function sendEvent(eventName: any, version :string, props: any) {
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
-    let payload: SteliosEvent = await generateContext(eventName,version, props);
+    let payload: SteliosEvent = await generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID;
+    payload.session_id = getSessionId();
+
     if (!payload.user_id) {
         if (props.cart_id) {
             setLocal('clickChaining', { previous_cart_id: props.cart_id })
@@ -151,4 +153,28 @@ async function sendBatch() {
                 removeFromStart(size - 1000, 'flickEvents')
             }
         })
+}
+
+
+function getSessionId (): string {
+    const TTL = 30 * 60 * 1000; // 30 minutes
+    const now = Date.now();
+
+  if (!ifExists('session')) {
+    const id = uuidv4();
+    setLocal('session', { id, timestamp: now });
+    return id;
+  }
+
+  const { id, timestamp } = getLocal('session');
+  const expired = (now - timestamp) >= TTL;
+
+  if (expired) {
+    const newId = uuidv4();
+    setLocal('session', { id: newId, timestamp: now });
+    return newId;
+  }
+
+  setLocal('session', { id, timestamp: now });
+  return id;
 }
