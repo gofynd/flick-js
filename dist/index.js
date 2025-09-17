@@ -11,7 +11,7 @@ export var stelioLocal = null;
 export var batchExecutorID = null;
 var apiDurationTimer = null; // Global variable to time difference between multiple API calls 
 // to avoid sending same data from multiple tabs 
-export async function identify(userID, version, traits, emitLoginEvent = true) {
+export async function identify(userID, traits, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
     let newIdentity = {};
     if (existingIdentity && Object.keys(existingIdentity).length > 0) {
@@ -40,7 +40,7 @@ export async function identify(userID, version, traits, emitLoginEvent = true) {
     }
     setLocal("userIdentity", newIdentity);
     if (emitLoginEvent) {
-        sendEvent("user_login", version, { "event_type": "identity", ...traits });
+        sendEvent("user_login", { "event_type": "identity", ...traits });
     }
 }
 export async function reset() {
@@ -66,7 +66,7 @@ export async function validateClient(apiKey) {
     };
     //return validate( apiKey)
 }
-export async function sendEvent(eventName, version, props) {
+export async function sendEvent(eventName, props) {
     let referer = '';
     if (!ifExists('referer')) {
         referer = document.referrer;
@@ -78,12 +78,15 @@ export async function sendEvent(eventName, version, props) {
     if (!ifExists('userIdentity')) {
         setLocal('userIdentity', { anonymousID: uuidv4() });
     }
+    console.log("Event name: ", eventName);
+    console.log("Event props: ", props);
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
-    let payload = await generateContext(eventName, version, props);
+    let payload = await generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID;
+    payload.session_id = getSessionId();
     if (!payload.user_id) {
         if (props.cart_id) {
             setLocal('clickChaining', { previous_cart_id: props.cart_id });
@@ -148,5 +151,23 @@ async function sendBatch() {
             removeFromStart(size - 1000, 'flickEvents');
         }
     });
+}
+function getSessionId() {
+    const TTL = 30 * 60 * 1000; // 30 minutes
+    const now = Date.now();
+    if (!ifExists('session')) {
+        const id = uuidv4();
+        setLocal('session', { id, timestamp: now });
+        return id;
+    }
+    const { id, timestamp } = getLocal('session');
+    const expired = (now - timestamp) >= TTL;
+    if (expired) {
+        const newId = uuidv4();
+        setLocal('session', { id: newId, timestamp: now });
+        return newId;
+    }
+    setLocal('session', { id, timestamp: now });
+    return id;
 }
 //# sourceMappingURL=index.js.map

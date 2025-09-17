@@ -5,8 +5,10 @@ export function validate(apiKey) {
     let res = post('verify_token', { access_token: apiKey }, { "x-dp-access-token": apiKey });
     return res;
 }
-export async function generateContext(eventName, version, props) {
+export async function generateContext(eventName, props) {
     var parser = new UAParser(navigator.userAgent);
+    const referrerUrl = typeof document !== 'undefined' ? (document.referrer || '') : '';
+    const device = parser.getDevice();
     let payload = {
         context: {
             library: {
@@ -21,21 +23,23 @@ export async function generateContext(eventName, version, props) {
                 height: window.screen.availHeight
             },
             user_agent: navigator.userAgent || '',
+            referrer: referrerUrl,
             locale: navigator.languages && navigator.languages.length
                 ? navigator.languages[0]
                 : navigator.language,
             device: {
                 is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
-                ...parser.getDevice()
+                type: device.type || 'desktop',
+                name: device.model
             }
         },
         event_id: uuidv4(),
-        version: version,
         event_name: eventName,
         properties: props,
         event_timestamp: new Date(),
         user_id: '',
-        anonymous_id: ''
+        anonymous_id: '',
+        session_id: ''
     };
     return payload;
 }

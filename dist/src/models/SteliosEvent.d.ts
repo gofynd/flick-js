@@ -6,4 +6,5 @@ export type SteliosEvent = {
     properties: any;
     event_timestamp: Date;
     anonymous_id: string;
+    session_id: string;
 };

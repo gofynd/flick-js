@@ -1,6 +1,6 @@
 /// <reference types="ua-parser-js" />
 export declare function validate(apiKey: any): Promise<any>;
-export declare function generateContext(eventName: any, version: string, props: any): Promise<{
+export declare function generateContext(eventName: any, props: any): Promise<{
     context: {
         library: {
             name: string;
@@ -14,20 +14,20 @@ export declare function generateContext(eventName: any, version: string, props: 
             height: number;
         };
         user_agent: string;
+        referrer: string;
         locale: string;
         device: {
-            model: string;
-            type: string;
-            vendor: string;
             is_mobile: boolean;
+            type: string;
+            name: string;
         };
     };
     event_id: string;
-    version: string;
     event_name: any;
     properties: any;
     event_timestamp: Date;
     user_id: string;
     anonymous_id: string;
+    session_id: string;
 }>;
 export declare function getLocation(): Promise<unknown>;
