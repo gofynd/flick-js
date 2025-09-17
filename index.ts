@@ -84,6 +84,8 @@ export async function sendEvent(eventName: any, props: any) {
     if (!ifExists('userIdentity')) {
         setLocal('userIdentity', { anonymousID: uuidv4() })
     }
+    console.log("Event name: ", eventName);
+    console.log("Event props: ", props);
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
