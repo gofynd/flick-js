@@ -83,6 +83,8 @@ export async function sendEvent(eventName: any, props: any) {
     let payload: SteliosEvent = generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID;
+    payload.session_id = getSessionId();
+
     if (!payload.user_id) {
         if (props.cart_id) {
             setLocal('clickChaining', { previous_cart_id: props.cart_id })
@@ -141,4 +143,27 @@ async function sendBatch() {
                 removeFromStart(size - 1000, 'flickEvents')
             }
         })
+}
+
+function getSessionId (): string {
+    const TTL = 30 * 60 * 1000; // 30 minutes
+    const now = Date.now();
+
+  if (!ifExists('session')) {
+    const id = uuidv4();
+    setLocal('session', { id, timestamp: now });
+    return id;
+  }
+
+  const { id, timestamp } = getLocal('session');
+  const expired = (now - timestamp) >= TTL;
+
+  if (expired) {
+    const newId = uuidv4();
+    setLocal('session', { id: newId, timestamp: now });
+    return newId;
+  }
+
+  setLocal('session', { id, timestamp: now });
+  return id;
 }
