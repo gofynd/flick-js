@@ -6,8 +6,10 @@ export function validate(apiKey: any) {
     let res = post('verify_token', { access_token: apiKey }, { "x-dp-access-token": apiKey })
     return res;
 }
-export function generateContext(eventName: any, props: any) {
+export async function generateContext(eventName: any, props: any) {
     var parser = new UAParser(navigator.userAgent);
+    const referrerUrl = typeof document !== 'undefined' ? (document.referrer || '') : '';
+    const device = parser.getDevice();
     let payload = {
         context: {
             library: {
@@ -16,16 +18,20 @@ export function generateContext(eventName: any, props: any) {
             },
             os: parser.getOS(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            location: await getLocation(),
             screen: {
                 width: window.screen.availWidth,
                 height: window.screen.availHeight
             },
             user_agent: navigator.userAgent || '',
+            referrer: referrerUrl,
             locale: navigator.languages && navigator.languages.length
                 ? navigator.languages[0]
                 : navigator.language,
             device: {
-                is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+                type: device.type || 'desktop',
+                name: device.model
             }
         },
         event_id: uuidv4(),
@@ -33,8 +39,36 @@ export function generateContext(eventName: any, props: any) {
         properties: props,
         event_timestamp: new Date(),
         user_id: '',
-        anonymous_id: ''
+        anonymous_id: '',
+        session_id: ''
     }
     return payload;
 
+}
+
+export function getLocation() {
+    return new Promise((resolve, reject) => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    resolve({ lat, long: lon, accuracy })
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    resolve(null);
+                },
+                {
+                    enableHighAccuracy: true, // More accurate, may take longer
+                    timeout: 10000,           // 10 seconds timeout
+                    maximumAge: 0             // No cached data
+                }
+            );
+        } else {
+            console.log("Geolocation not supported on this browser.");
+            resolve(null);
+        }
+    });
 }

@@ -74,15 +74,24 @@ export async function validateClient(apiKey: any) {
 }
 
 export async function sendEvent(eventName: any, props: any) {
+    let referer = ''
+    if (!ifExists('referer')) {
+        referer = document.referrer
+        setLocal('referer', referer);
+    } else {
+        referer = getLocal('referer');
+    }
     if (!ifExists('userIdentity')) {
         setLocal('userIdentity', { anonymousID: uuidv4() })
     }
     if (!eventName || !props) {
         throw new Error('Please provide eventName and properties of the user');
     }
-    let payload: SteliosEvent = generateContext(eventName, props);
+    let payload: SteliosEvent = await generateContext(eventName, props);
     payload.user_id = getLocal('userIdentity').userID || null;
     payload.anonymous_id = getLocal('userIdentity').anonymousID;
+    payload.session_id = getSessionId();
+
     if (!payload.user_id) {
         if (props.cart_id) {
             setLocal('clickChaining', { previous_cart_id: props.cart_id })
@@ -101,6 +110,9 @@ export async function sendEvent(eventName: any, props: any) {
                 }  
             }
         }
+    }
+    if (!props.utm_source || props.utm_source=='') {
+        props.utm_source=referer;
     }
     if (!ifExists('flickEvents')) {
         setLocal('flickEvents', new Array(payload))
@@ -141,4 +153,28 @@ async function sendBatch() {
                 removeFromStart(size - 1000, 'flickEvents')
             }
         })
+}
+
+
+function getSessionId (): string {
+    const TTL = 30 * 60 * 1000; // 30 minutes
+    const now = Date.now();
+
+  if (!ifExists('session')) {
+    const id = uuidv4();
+    setLocal('session', { id, timestamp: now });
+    return id;
+  }
+
+  const { id, timestamp } = getLocal('session');
+  const expired = (now - timestamp) >= TTL;
+
+  if (expired) {
+    const newId = uuidv4();
+    setLocal('session', { id: newId, timestamp: now });
+    return newId;
+  }
+
+  setLocal('session', { id, timestamp: now });
+  return id;
 }
