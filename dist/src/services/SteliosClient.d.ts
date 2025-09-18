@@ -13,9 +13,12 @@ export declare function generateContext(eventName: any, props: any): {
             height: number;
         };
         user_agent: string;
+        referrer: string;
         locale: string;
         device: {
             is_mobile: boolean;
+            type: string;
+            name: string;
         };
     };
     event_id: string;
@@ -24,4 +27,5 @@ export declare function generateContext(eventName: any, props: any): {
     event_timestamp: Date;
     user_id: string;
     anonymous_id: string;
+    session_id: string;
 };

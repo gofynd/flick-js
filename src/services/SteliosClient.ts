@@ -8,6 +8,8 @@ export function validate(apiKey: any) {
 }
 export function generateContext(eventName: any, props: any) {
     var parser = new UAParser(navigator.userAgent);
+    const referrerUrl = typeof document !== 'undefined' ? (document.referrer || '') : '';
+    const device = parser.getDevice();
     let payload = {
         context: {
             library: {
@@ -21,11 +23,14 @@ export function generateContext(eventName: any, props: any) {
                 height: window.screen.availHeight
             },
             user_agent: navigator.userAgent || '',
+            referrer: referrerUrl,
             locale: navigator.languages && navigator.languages.length
                 ? navigator.languages[0]
                 : navigator.language,
             device: {
-                is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                is_mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+                type: device.type || 'desktop',
+                name: device.model
             }
         },
         event_id: uuidv4(),
@@ -33,7 +38,8 @@ export function generateContext(eventName: any, props: any) {
         properties: props,
         event_timestamp: new Date(),
         user_id: '',
-        anonymous_id: ''
+        anonymous_id: '',
+        session_id: ''
     }
     return payload;
 
