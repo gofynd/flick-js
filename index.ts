@@ -56,12 +56,47 @@ export async function reset() {
     setLocal("userIdentity", newIdentity)
 }
 
-export async function initialize(endpoint: string, apiKey: any, flushInterval: number = 15000, apiDurationInterval: number = 5000) {
-    apiDurationTimer = apiDurationInterval;
+const DEFAULT_FLUSH_INTERVAL = 15000;
+const MIN_FLUSH_INTERVAL = 5000;
+var maxBatchBytes: number | null = null; // no size limit unless maxBatchSize is passed to initialize
+const textEncoder = new TextEncoder();
+
+function byteSize(value: any): number {
+    return textEncoder.encode(JSON.stringify(value)).length;
+}
+
+// number of events from the start of the queue that fit in one request of at most maxBatchBytes (always at least 1)
+function batchCount(events: Array<SteliosEvent>): number {
+    if (maxBatchBytes === null) return events.length;
+    let bytes = byteSize({ batch: [], sent_at: new Date().toISOString() });
+    let count = 0;
+    for (const event of events) {
+        const eventBytes = byteSize(event) + 1; // +1 for the comma between events
+        if (count > 0 && bytes + eventBytes > maxBatchBytes) break;
+        bytes += eventBytes;
+        count++;
+    }
+    return count;
+}
+
+/**
+ * @param flushInterval time in ms between checks that send queued events to the API. Defaults to 15000, must be at least 5000 when provided.
+ * @param maxBatchSize optional, max size in KB of one request. Events are also sent as soon as the queue reaches this size. No size limit is applied unless it is passed, must be greater than 0.
+ */
+export async function initialize(endpoint: string, apiKey: any, flushInterval: number = DEFAULT_FLUSH_INTERVAL, apiDurationInterval: number = 5000, maxBatchSize?: number) {
+    if (typeof flushInterval !== 'number' || isNaN(flushInterval) || flushInterval < MIN_FLUSH_INTERVAL) {
+        throw new Error(`flushInterval must be a number of at least ${MIN_FLUSH_INTERVAL} ms`);
+    }
+    if (maxBatchSize !== undefined && (typeof maxBatchSize !== 'number' || isNaN(maxBatchSize) || maxBatchSize <= 0)) {
+        throw new Error('maxBatchSize must be a number greater than 0 (KB)');
+    }
+    maxBatchBytes = maxBatchSize === undefined ? null : maxBatchSize * 1024;
+    // keep the multi-tab gate below the flush interval so it never skips a tick
+    apiDurationTimer = Math.min(apiDurationInterval, flushInterval / 2);
     initStorage()
     axiosCreate(endpoint, apiKey)
     if (!batchExecutorID)
-        batchExecutorID = setInterval(sendBatch, flushInterval)
+        batchExecutorID = setInterval(() => sendBatch(), flushInterval)
 }
 
 export async function validateClient(apiKey: any) {
@@ -104,43 +139,58 @@ export async function sendEvent(eventName: any, props: any) {
             }
         }
     }
+    let result;
     if (!ifExists('flickEvents')) {
         setLocal('flickEvents', new Array(payload))
-        return;
+    } else {
+        result = appendLocal('flickEvents', payload)
     }
-    return appendLocal('flickEvents', payload)
+    // send without waiting for the next flush interval once the queue reaches the size limit
+    if (batchExecutorID && maxBatchBytes !== null && byteSize(getLocal('flickEvents')) >= maxBatchBytes) {
+        sendBatch();
+    }
+    return result;
 }
 
-async function sendBatch() {
-    // check if apiCallTimestamp is present in localStorage
-    // if not present, set it to current time epoch
-    if (!ifExists('apiCallTimestamp')) {
-        setLocal('apiCallTimestamp', new Date().getTime());
-    } else {
-        // if timestamp is present check if apiDurationTimer has elapsed since then, if yes reset it
-        if (new Date().getTime() - getLocal('apiCallTimestamp') > apiDurationTimer) {
+// skipGate is only used to drain a queue that is still over the size limit after a successful send
+async function sendBatch(skipGate: boolean = false) {
+    if (!skipGate) {
+        // check if apiCallTimestamp is present in localStorage
+        // if not present, set it to current time epoch
+        if (!ifExists('apiCallTimestamp')) {
             setLocal('apiCallTimestamp', new Date().getTime());
         } else {
-            // if apiDurationTimer has not elapsed, make no api call and return
-            return;
+            // if timestamp is present check if apiDurationTimer has elapsed since then, if yes reset it
+            if (new Date().getTime() - getLocal('apiCallTimestamp') > apiDurationTimer) {
+                setLocal('apiCallTimestamp', new Date().getTime());
+            } else {
+                // if apiDurationTimer has not elapsed, make no api call and return
+                return;
+            }
         }
     }
     if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0)
         return;
+    const queued = getLocal('flickEvents');
+    // send only as many events as fit in maxBatchBytes, the rest stay queued for the next send
+    const size = batchCount(queued);
     let event: EventPayload = {
-        batch: getLocal('flickEvents'),
+        batch: queued.slice(0, size),
         sent_at: new Date().toISOString(),
     }
-    let size = getLocal('flickEvents').length || 0;
     send(event, {})
         .then((res: any) => {
             removeFromStart(size, 'flickEvents')
+            const remaining = getLocal('flickEvents');
+            if (maxBatchBytes !== null && Array.isArray(remaining) && byteSize(remaining) >= maxBatchBytes) {
+                sendBatch(true);
+            }
         })
         .catch(err => {
             console.error('error while sending api request ', err)
             // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
-            if (size > 1000) {
-                removeFromStart(size - 1000, 'flickEvents')
+            if (queued.length > 1000) {
+                removeFromStart(queued.length - 1000, 'flickEvents')
             }
         })
 }

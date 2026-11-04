@@ -57,6 +57,39 @@ describe("testing initialize functionality", () => {
 
     })
 
+    it("should reject flushInterval below 5000ms", async () => {
+        for (const bad of [4999, 2000, 0, -5, NaN, '5000']) {
+            let error = null
+            try {
+                await Stelios.initialize('test', 'key', bad)
+            } catch (err) {
+                error = err
+            }
+            expect(error, `flushInterval ${bad}`).to.not.null
+        }
+    })
+
+    it("should accept flushInterval of 5000ms or more", async () => {
+        await Stelios.initialize('test', 'key', 5000)
+    })
+
+    it("should reject maxBatchSize that is not a positive number", async () => {
+        for (const bad of [0, -5, NaN, '16']) {
+            let error = null
+            try {
+                await Stelios.initialize('test', 'key', 5000, 5000, bad)
+            } catch (err) {
+                error = err
+            }
+            expect(error, `maxBatchSize ${bad}`).to.not.null
+        }
+    })
+
+    it("should accept maxBatchSize greater than 0", async () => {
+        await Stelios.initialize('test', 'key', 5000, 5000, 0.5)
+        await Stelios.initialize('test', 'key', 5000, 5000, 64)
+    })
+
     it("should check for error when api key is not valid", async () => {
 
         try {
