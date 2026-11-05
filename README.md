@@ -61,7 +61,7 @@ To get a local copy up and running follow these simple example steps.
              endpoint // required in string form.
              apiKey   // required in string form.
              flushInterval // optional, in milliseconds. How often queued events are sent to the API. Default 15000. Minimum 5000, otherwise initialize throws.
-             apiDurationInterval // optional, in milliseconds. Minimum gap between two sends (shared across tabs). Default 5000.
+             apiDurationInterval // optional, in milliseconds. Minimum gap before a new send is started (shared across tabs, capped at half of flushInterval). Default 5000. Note: once a send starts, a queue still above maxBatchSize keeps draining in back-to-back requests without waiting for this gap.
              maxBatchSize // optional, in KB. Max size of one request; events are also sent as soon as the queue reaches this size. No size limit is applied unless this is passed. Must be greater than 0, otherwise initialize throws.
     3.Function Type: 
             Static Public        

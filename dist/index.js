@@ -145,7 +145,9 @@ export async function sendEvent(eventName, props) {
     }
     return result;
 }
-// skipGate is only used to drain a queue that is still over the size limit after a successful send
+// skipGate is only used to drain a queue that is still over the size limit after a successful send.
+// apiDurationTimer gates the start of a send, not each chunk of a drain, so drain chunks go out
+// back to back. The drain is bounded instead by the queue size: each chunk consumes maxBatchBytes.
 async function sendBatch(skipGate = false) {
     if (!skipGate) {
         // check if apiCallTimestamp is present in localStorage
