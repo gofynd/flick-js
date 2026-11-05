@@ -17,9 +17,12 @@ var apiDurationTimer = null; // Global variable to time difference between multi
 // drain chunk, re-reading events that haven't been removed from the queue yet and sending them twice.
 const SEND_LOCK_KEY = 'flickSendLock';
 // Fallback-only: localStorage read-then-write can't be atomic across tabs, so two tabs can both
-// observe "unlocked" before either writes the lock. TTL is a safety net for that path only (a
-// tab closed/crashed mid-request can't block sends forever); it does not need to cover a pending
-// request because withSendLock releases it as soon as the request settles, not after a fixed delay.
+// observe "unlocked" before either writes the lock (not closeable without a native primitive; the
+// Web Locks branch below is what actually closes it). TTL is a safety net for a crashed/closed tab;
+// the lock is tagged with a per-acquisition token and renewed on a heartbeat while held, so a
+// request that's still genuinely in flight past the TTL doesn't get mistaken for a dead one and
+// have its lock stolen (and, since release checks the token, a tab that *does* get its lock stolen
+// can no longer delete the new holder's lock out from under it when its own request finally settles).
 const SEND_LOCK_TTL_MS = 30000;
 // Web Locks API (navigator.locks) is arbitrated by the browser itself, so acquisition is atomic
 // across tabs/contexts with no read-then-write race, and the lock is held for exactly the duration
@@ -27,19 +30,35 @@ const SEND_LOCK_TTL_MS = 30000;
 // it's available and fall back to the localStorage TTL lock only where it isn't (e.g. this test
 // environment, or older browsers).
 const hasWebLocks = typeof navigator !== 'undefined' && !!navigator.locks && typeof navigator.locks.request === 'function';
+function readSendLock() {
+    if (!ifExists(SEND_LOCK_KEY))
+        return null;
+    const lock = getLocal(SEND_LOCK_KEY);
+    return lock && typeof lock.token === 'string' && typeof lock.lockedAt === 'number' ? lock : null;
+}
 function acquireSendLock() {
     const now = new Date().getTime();
-    if (ifExists(SEND_LOCK_KEY)) {
-        const lockedAt = getLocal(SEND_LOCK_KEY);
-        if (typeof lockedAt === 'number' && now - lockedAt < SEND_LOCK_TTL_MS) {
-            return false;
-        }
+    const lock = readSendLock();
+    if (lock && now - lock.lockedAt < SEND_LOCK_TTL_MS) {
+        return null;
     }
-    setLocal(SEND_LOCK_KEY, now);
-    return true;
+    const token = `${now}-${Math.random().toString(36).slice(2)}`;
+    setLocal(SEND_LOCK_KEY, { token, lockedAt: now });
+    return token;
 }
-function releaseSendLock() {
-    deleteSteliosLocal(SEND_LOCK_KEY);
+function renewSendLock(token) {
+    const lock = readSendLock();
+    if (lock && lock.token === token) {
+        setLocal(SEND_LOCK_KEY, { token, lockedAt: new Date().getTime() });
+    }
+}
+// Only releases the lock if it still belongs to this token, so a tab whose lock was already taken
+// over by another tab (TTL expired while it was still genuinely sending) can't delete that tab's lock.
+function releaseSendLock(token) {
+    const lock = readSendLock();
+    if (lock && lock.token === token) {
+        deleteSteliosLocal(SEND_LOCK_KEY);
+    }
 }
 // Runs fn only while holding the send lock; backs off (without running fn) if another
 // tab/context already holds it. Caller is responsible for not nesting calls to this.
@@ -54,16 +73,21 @@ async function withSendLock(fn) {
         });
         return;
     }
-    if (!acquireSendLock()) {
+    const token = acquireSendLock();
+    if (!token) {
         // another send (this tab or another tab) is already in flight for this queue; back off
         // instead of re-reading events it hasn't removed yet
         return;
     }
+    // renew the TTL while fn() is running so a request that legitimately takes longer than
+    // SEND_LOCK_TTL_MS doesn't get mistaken for a crashed tab and have its lock stolen
+    const heartbeat = setInterval(() => renewSendLock(token), SEND_LOCK_TTL_MS / 3);
     try {
         await fn();
     }
     finally {
-        releaseSendLock();
+        clearInterval(heartbeat);
+        releaseSendLock(token);
     }
 }
 export async function identify(userID, traits, emitLoginEvent = true) {
@@ -112,6 +136,18 @@ var maxBatchBytes = null; // no size limit unless maxBatchSize is passed to init
 const textEncoder = new TextEncoder();
 function byteSize(value) {
     return textEncoder.encode(JSON.stringify(value)).length;
+}
+// size of `events` wrapped the way it's actually sent ({batch, sent_at}), so every "are we over the
+// cap" check (push-site trigger, drain-continue check) measures the same shape as what gets sent.
+function wrappedBatchBytes(events) {
+    return byteSize({ batch: events, sent_at: new Date().toISOString() });
+}
+// single read of the queue, defaulting to [] both when the key is missing (getLocal's own "missing"
+// sentinel is {}, not []) and when the stored value is corrupted/unparsable (getLocal's own catch
+// returns the Error itself) - callers can safely treat the result as an array either way.
+function getEventQueue() {
+    const stored = getLocal('flickEvents');
+    return Array.isArray(stored) ? stored : [];
 }
 // number of events from the start of the queue that fit in one request of at most maxBatchBytes (always at least 1)
 function batchCount(events) {
@@ -195,28 +231,26 @@ export async function sendEvent(eventName, props) {
             }
         }
     }
-    const queue = ifExists('flickEvents') ? getLocal('flickEvents') : [];
+    const queue = getEventQueue();
     queue.push(payload);
     setLocal('flickEvents', queue);
     // send without waiting for the next flush interval once the queue reaches the size limit.
-    // reuses the queue already read above (no extra localStorage parse) and measures it the same
-    // way batchCount() does (array + the {batch, sent_at} wrapper) so the trigger can't drift from
-    // what actually gets capped at send time. (A plain `batchCount(queue) < queue.length` check
-    // would miss a single event that alone exceeds maxBatchBytes, since batchCount always keeps at
-    // least one event per request.)
-    if (batchExecutorID && maxBatchBytes !== null && byteSize({ batch: queue, sent_at: new Date().toISOString() }) >= maxBatchBytes) {
+    // reuses the queue already read above and measures it the same way batchCount() does (array +
+    // the {batch, sent_at} wrapper) so the trigger can't drift from what actually gets capped at
+    // send time. (A plain `batchCount(queue) < queue.length` check would miss a single event that
+    // alone exceeds maxBatchBytes, since batchCount always keeps at least one event per request.)
+    if (batchExecutorID && maxBatchBytes !== null && wrappedBatchBytes(queue) >= maxBatchBytes) {
         sendBatch();
     }
 }
-// skipGate is only used when sendBatch is re-entered for a timer tick while a drain from a prior
-// call is still deciding whether to continue; apiDurationTimer gates the start of a send, not each
-// chunk of a drain, so an internal drain loop (below) handles back-to-back chunks itself instead of
-// recursing (recursing would try to re-acquire a lock this call may already be holding).
-// withSendLock is what actually prevents two sends from being in flight at once, in this tab or
-// another; it is held for the whole drain loop so a still-over-the-limit queue keeps draining under
-// one lock acquisition instead of releasing and racing another tab between chunks.
-async function sendBatch(skipGate = false) {
-    if (!skipGate) {
+// withSendLock prevents two sends from being in flight at once, in this tab or another. The
+// apiDurationTimer pacing gate runs INSIDE the lock callback, not before acquiring the lock: if it
+// ran first, a tick that backs off only because another tab/context currently holds the lock (no
+// send happened) would still reset apiCallTimestamp, throttling the next real attempt for no reason.
+// A still-over-the-limit queue keeps draining under one lock acquisition via the loop below instead
+// of releasing and racing another tab between chunks.
+async function sendBatch() {
+    await withSendLock(async () => {
         // check if apiCallTimestamp is present in localStorage
         // if not present, set it to current time epoch
         if (!ifExists('apiCallTimestamp')) {
@@ -232,15 +266,13 @@ async function sendBatch(skipGate = false) {
                 return;
             }
         }
-    }
-    await withSendLock(async () => {
         let keepDraining = true;
         while (keepDraining) {
             keepDraining = false;
-            if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0) {
+            const queued = getEventQueue();
+            if (queued.length == 0 || !ifExists('userIdentity')) {
                 return;
             }
-            const queued = getLocal('flickEvents');
             // send only as many events as fit in maxBatchBytes, the rest stay queued for the next send
             const size = batchCount(queued);
             const event = {
@@ -250,12 +282,11 @@ async function sendBatch(skipGate = false) {
             try {
                 await send(event, {});
                 removeFromStart(size, 'flickEvents');
-                const remaining = ifExists('flickEvents') ? getLocal('flickEvents') : [];
+                const remaining = getEventQueue();
                 // measured the same wrapped way as batchCount()/the early-flush check in sendEvent()
                 // (array + the {batch, sent_at} wrapper), so the drain can't stop early just because
                 // the wrapper's own bytes are what pushes the request over the cap.
-                if (maxBatchBytes !== null && Array.isArray(remaining) && remaining.length > 0 &&
-                    byteSize({ batch: remaining, sent_at: new Date().toISOString() }) >= maxBatchBytes) {
+                if (maxBatchBytes !== null && remaining.length > 0 && wrappedBatchBytes(remaining) >= maxBatchBytes) {
                     keepDraining = true;
                 }
             }
@@ -266,8 +297,8 @@ async function sendBatch(skipGate = false) {
                 // `queued` snapshot from above) so events appended while this request was in flight are
                 // counted too, and the threshold is no longer tied to how many events this one request
                 // happened to attempt.
-                const current = ifExists('flickEvents') ? getLocal('flickEvents') : [];
-                if (Array.isArray(current) && current.length > 1000) {
+                const current = getEventQueue();
+                if (current.length > 1000) {
                     removeFromStart(current.length - 1000, 'flickEvents');
                 }
                 return;
