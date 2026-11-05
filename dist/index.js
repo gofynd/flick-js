@@ -15,9 +15,18 @@ var apiDurationTimer = null; // Global variable to time difference between multi
 // apiDurationTimer only paces how often a NEW send is allowed to start; it does nothing once a send
 // is already running, so without this lock a slow request can still overlap with a later tick or
 // drain chunk, re-reading events that haven't been removed from the queue yet and sending them twice.
-// TTL is a safety net: if a tab is closed/crashes mid-request, the lock can't block sends forever.
 const SEND_LOCK_KEY = 'flickSendLock';
+// Fallback-only: localStorage read-then-write can't be atomic across tabs, so two tabs can both
+// observe "unlocked" before either writes the lock. TTL is a safety net for that path only (a
+// tab closed/crashed mid-request can't block sends forever); it does not need to cover a pending
+// request because withSendLock releases it as soon as the request settles, not after a fixed delay.
 const SEND_LOCK_TTL_MS = 30000;
+// Web Locks API (navigator.locks) is arbitrated by the browser itself, so acquisition is atomic
+// across tabs/contexts with no read-then-write race, and the lock is held for exactly the duration
+// of the callback (released on completion or tab crash) instead of guessing a TTL. Use it whenever
+// it's available and fall back to the localStorage TTL lock only where it isn't (e.g. this test
+// environment, or older browsers).
+const hasWebLocks = typeof navigator !== 'undefined' && !!navigator.locks && typeof navigator.locks.request === 'function';
 function acquireSendLock() {
     const now = new Date().getTime();
     if (ifExists(SEND_LOCK_KEY)) {
@@ -31,6 +40,31 @@ function acquireSendLock() {
 }
 function releaseSendLock() {
     deleteSteliosLocal(SEND_LOCK_KEY);
+}
+// Runs fn only while holding the send lock; backs off (without running fn) if another
+// tab/context already holds it. Caller is responsible for not nesting calls to this.
+async function withSendLock(fn) {
+    if (hasWebLocks) {
+        await navigator.locks.request(SEND_LOCK_KEY, { ifAvailable: true }, async (lock) => {
+            if (!lock) {
+                // another tab/context already holds the lock; back off instead of re-reading events it hasn't removed yet
+                return;
+            }
+            await fn();
+        });
+        return;
+    }
+    if (!acquireSendLock()) {
+        // another send (this tab or another tab) is already in flight for this queue; back off
+        // instead of re-reading events it hasn't removed yet
+        return;
+    }
+    try {
+        await fn();
+    }
+    finally {
+        releaseSendLock();
+    }
 }
 export async function identify(userID, traits, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
@@ -174,11 +208,13 @@ export async function sendEvent(eventName, props) {
         sendBatch();
     }
 }
-// skipGate is only used to drain a queue that is still over the size limit after a successful send.
-// apiDurationTimer gates the start of a send, not each chunk of a drain, so drain chunks go out
-// back to back. The drain is bounded instead by the queue size: each chunk consumes maxBatchBytes.
-// SEND_LOCK (see acquireSendLock) still applies to every call, gated or not: it's what actually
-// prevents two sends from being in flight at once, in this tab or another.
+// skipGate is only used when sendBatch is re-entered for a timer tick while a drain from a prior
+// call is still deciding whether to continue; apiDurationTimer gates the start of a send, not each
+// chunk of a drain, so an internal drain loop (below) handles back-to-back chunks itself instead of
+// recursing (recursing would try to re-acquire a lock this call may already be holding).
+// withSendLock is what actually prevents two sends from being in flight at once, in this tab or
+// another; it is held for the whole drain loop so a still-over-the-limit queue keeps draining under
+// one lock acquisition instead of releasing and racing another tab between chunks.
 async function sendBatch(skipGate = false) {
     if (!skipGate) {
         // check if apiCallTimestamp is present in localStorage
@@ -197,42 +233,45 @@ async function sendBatch(skipGate = false) {
             }
         }
     }
-    if (!acquireSendLock()) {
-        // another send (this tab or another tab) is already in flight for this queue; back off
-        // instead of re-reading events it hasn't removed yet
-        return;
-    }
-    if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0) {
-        releaseSendLock();
-        return;
-    }
-    const queued = getLocal('flickEvents');
-    // send only as many events as fit in maxBatchBytes, the rest stay queued for the next send
-    const size = batchCount(queued);
-    let event = {
-        batch: queued.slice(0, size),
-        sent_at: new Date().toISOString(),
-    };
-    send(event, {})
-        .then((res) => {
-        removeFromStart(size, 'flickEvents');
-        releaseSendLock();
-        const remaining = ifExists('flickEvents') ? getLocal('flickEvents') : [];
-        if (maxBatchBytes !== null && Array.isArray(remaining) && byteSize(remaining) >= maxBatchBytes) {
-            sendBatch(true);
-        }
-    })
-        .catch(err => {
-        console.error('error while sending api request ', err);
-        releaseSendLock();
-        // if there is continuous failure to send events, then clear events in LRU manner to avoid
-        // excess storage of events in browser's local storage. Reads the live queue (not the
-        // `queued` snapshot from above) so events appended while this request was in flight are
-        // counted too, and the threshold is no longer tied to how many events this one request
-        // happened to attempt.
-        const current = ifExists('flickEvents') ? getLocal('flickEvents') : [];
-        if (Array.isArray(current) && current.length > 1000) {
-            removeFromStart(current.length - 1000, 'flickEvents');
+    await withSendLock(async () => {
+        let keepDraining = true;
+        while (keepDraining) {
+            keepDraining = false;
+            if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0) {
+                return;
+            }
+            const queued = getLocal('flickEvents');
+            // send only as many events as fit in maxBatchBytes, the rest stay queued for the next send
+            const size = batchCount(queued);
+            const event = {
+                batch: queued.slice(0, size),
+                sent_at: new Date().toISOString(),
+            };
+            try {
+                await send(event, {});
+                removeFromStart(size, 'flickEvents');
+                const remaining = ifExists('flickEvents') ? getLocal('flickEvents') : [];
+                // measured the same wrapped way as batchCount()/the early-flush check in sendEvent()
+                // (array + the {batch, sent_at} wrapper), so the drain can't stop early just because
+                // the wrapper's own bytes are what pushes the request over the cap.
+                if (maxBatchBytes !== null && Array.isArray(remaining) && remaining.length > 0 &&
+                    byteSize({ batch: remaining, sent_at: new Date().toISOString() }) >= maxBatchBytes) {
+                    keepDraining = true;
+                }
+            }
+            catch (err) {
+                console.error('error while sending api request ', err);
+                // if there is continuous failure to send events, then clear events in LRU manner to avoid
+                // excess storage of events in browser's local storage. Reads the live queue (not the
+                // `queued` snapshot from above) so events appended while this request was in flight are
+                // counted too, and the threshold is no longer tied to how many events this one request
+                // happened to attempt.
+                const current = ifExists('flickEvents') ? getLocal('flickEvents') : [];
+                if (Array.isArray(current) && current.length > 1000) {
+                    removeFromStart(current.length - 1000, 'flickEvents');
+                }
+                return;
+            }
         }
     });
 }
