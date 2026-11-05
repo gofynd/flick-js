@@ -1,6 +1,6 @@
 import { validate, generateContext } from "./src/services/SteliosClient";
 import { send } from "./src/services/EventsProcessor";
-import { appendLocal, setLocal, ifExists, getLocal, removeFromStart, deleteSteliosLocal, initStorage } from "./src/services/StelioLocalStore"
+import { setLocal, ifExists, getLocal, removeFromStart, deleteSteliosLocal, initStorage } from "./src/services/StelioLocalStore"
 import { EventPayload } from './src/models/eventPayload'
 import { v4 as uuidv4 } from 'uuid';
 import { SteliosEvent } from "./src/models/steliosEvent";
@@ -13,8 +13,32 @@ export var client: any = null
 export var apiKey: any = null;
 export var stelioLocal: any = null
 export var batchExecutorID: any = null
-var apiDurationTimer: any = null; // Global variable to time difference between multiple API calls 
-// to avoid sending same data from multiple tabs 
+var apiDurationTimer: any = null; // Global variable to time difference between multiple API calls
+// to avoid sending same data from multiple tabs
+
+// SEND_LOCK guards against two sendBatch() calls being in flight at once (this tab or another tab).
+// apiDurationTimer only paces how often a NEW send is allowed to start; it does nothing once a send
+// is already running, so without this lock a slow request can still overlap with a later tick or
+// drain chunk, re-reading events that haven't been removed from the queue yet and sending them twice.
+// TTL is a safety net: if a tab is closed/crashes mid-request, the lock can't block sends forever.
+const SEND_LOCK_KEY = 'flickSendLock';
+const SEND_LOCK_TTL_MS = 30000;
+
+function acquireSendLock(): boolean {
+    const now = new Date().getTime();
+    if (ifExists(SEND_LOCK_KEY)) {
+        const lockedAt = getLocal(SEND_LOCK_KEY);
+        if (typeof lockedAt === 'number' && now - lockedAt < SEND_LOCK_TTL_MS) {
+            return false;
+        }
+    }
+    setLocal(SEND_LOCK_KEY, now);
+    return true;
+}
+
+function releaseSendLock() {
+    deleteSteliosLocal(SEND_LOCK_KEY);
+}
 
 export async function identify(userID: string, traits: any, emitLoginEvent = true) {
     const existingIdentity = getLocal('userIdentity');
@@ -81,11 +105,15 @@ function batchCount(events: Array<SteliosEvent>): number {
 
 /**
  * @param flushInterval time in ms between checks that send queued events to the API. Defaults to 15000, must be at least 5000 when provided.
+ * @param apiDurationInterval minimum gap in ms before a new send is allowed to start. Defaults to 5000, must be a non-negative number when provided.
  * @param maxBatchSize optional, max size in KB of one request. Events are also sent as soon as the queue reaches this size. No size limit is applied unless it is passed, must be greater than 0.
  */
 export async function initialize(endpoint: string, apiKey: any, flushInterval: number = DEFAULT_FLUSH_INTERVAL, apiDurationInterval: number = 5000, maxBatchSize?: number) {
     if (typeof flushInterval !== 'number' || isNaN(flushInterval) || flushInterval < MIN_FLUSH_INTERVAL) {
         throw new Error(`flushInterval must be a number of at least ${MIN_FLUSH_INTERVAL} ms`);
+    }
+    if (typeof apiDurationInterval !== 'number' || isNaN(apiDurationInterval) || apiDurationInterval < 0) {
+        throw new Error('apiDurationInterval must be a non-negative number');
     }
     if (maxBatchSize !== undefined && (typeof maxBatchSize !== 'number' || isNaN(maxBatchSize) || maxBatchSize <= 0)) {
         throw new Error('maxBatchSize must be a number greater than 0 (KB)');
@@ -95,8 +123,12 @@ export async function initialize(endpoint: string, apiKey: any, flushInterval: n
     apiDurationTimer = Math.min(apiDurationInterval, flushInterval / 2);
     initStorage()
     axiosCreate(endpoint, apiKey)
-    if (!batchExecutorID)
-        batchExecutorID = setInterval(() => sendBatch(), flushInterval)
+    // re-create the timer on every call so a later initialize() with a different flushInterval
+    // actually takes effect, instead of being silently ignored once a timer already exists
+    if (batchExecutorID) {
+        clearInterval(batchExecutorID);
+    }
+    batchExecutorID = setInterval(() => sendBatch(), flushInterval)
 }
 
 export async function validateClient(apiKey: any) {
@@ -139,22 +171,25 @@ export async function sendEvent(eventName: any, props: any) {
             }
         }
     }
-    let result;
-    if (!ifExists('flickEvents')) {
-        setLocal('flickEvents', new Array(payload))
-    } else {
-        result = appendLocal('flickEvents', payload)
-    }
-    // send without waiting for the next flush interval once the queue reaches the size limit
-    if (batchExecutorID && maxBatchBytes !== null && byteSize(getLocal('flickEvents')) >= maxBatchBytes) {
+    const queue: Array<SteliosEvent> = ifExists('flickEvents') ? getLocal('flickEvents') : [];
+    queue.push(payload);
+    setLocal('flickEvents', queue);
+    // send without waiting for the next flush interval once the queue reaches the size limit.
+    // reuses the queue already read above (no extra localStorage parse) and measures it the same
+    // way batchCount() does (array + the {batch, sent_at} wrapper) so the trigger can't drift from
+    // what actually gets capped at send time. (A plain `batchCount(queue) < queue.length` check
+    // would miss a single event that alone exceeds maxBatchBytes, since batchCount always keeps at
+    // least one event per request.)
+    if (batchExecutorID && maxBatchBytes !== null && byteSize({ batch: queue, sent_at: new Date().toISOString() }) >= maxBatchBytes) {
         sendBatch();
     }
-    return result;
 }
 
 // skipGate is only used to drain a queue that is still over the size limit after a successful send.
 // apiDurationTimer gates the start of a send, not each chunk of a drain, so drain chunks go out
 // back to back. The drain is bounded instead by the queue size: each chunk consumes maxBatchBytes.
+// SEND_LOCK (see acquireSendLock) still applies to every call, gated or not: it's what actually
+// prevents two sends from being in flight at once, in this tab or another.
 async function sendBatch(skipGate: boolean = false) {
     if (!skipGate) {
         // check if apiCallTimestamp is present in localStorage
@@ -171,8 +206,15 @@ async function sendBatch(skipGate: boolean = false) {
             }
         }
     }
-    if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0)
+    if (!acquireSendLock()) {
+        // another send (this tab or another tab) is already in flight for this queue; back off
+        // instead of re-reading events it hasn't removed yet
         return;
+    }
+    if (!ifExists('flickEvents') || !ifExists('userIdentity') || getLocal('flickEvents').length == 0) {
+        releaseSendLock();
+        return;
+    }
     const queued = getLocal('flickEvents');
     // send only as many events as fit in maxBatchBytes, the rest stay queued for the next send
     const size = batchCount(queued);
@@ -183,16 +225,23 @@ async function sendBatch(skipGate: boolean = false) {
     send(event, {})
         .then((res: any) => {
             removeFromStart(size, 'flickEvents')
-            const remaining = getLocal('flickEvents');
+            releaseSendLock();
+            const remaining = ifExists('flickEvents') ? getLocal('flickEvents') : [];
             if (maxBatchBytes !== null && Array.isArray(remaining) && byteSize(remaining) >= maxBatchBytes) {
                 sendBatch(true);
             }
         })
         .catch(err => {
             console.error('error while sending api request ', err)
-            // if there is continuous failure to send events, then clear events in LRU manner to avoid excess storage of events in browser's local storage
-            if (queued.length > 1000) {
-                removeFromStart(queued.length - 1000, 'flickEvents')
+            releaseSendLock();
+            // if there is continuous failure to send events, then clear events in LRU manner to avoid
+            // excess storage of events in browser's local storage. Reads the live queue (not the
+            // `queued` snapshot from above) so events appended while this request was in flight are
+            // counted too, and the threshold is no longer tied to how many events this one request
+            // happened to attempt.
+            const current = ifExists('flickEvents') ? getLocal('flickEvents') : [];
+            if (Array.isArray(current) && current.length > 1000) {
+                removeFromStart(current.length - 1000, 'flickEvents')
             }
         })
 }
